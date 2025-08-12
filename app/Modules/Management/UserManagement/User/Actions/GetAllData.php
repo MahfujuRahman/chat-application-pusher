@@ -19,7 +19,7 @@ class GetAllData
             $start_date = request()->input('start_date');
             $end_date = request()->input('end_date');
 
-            $with = ['role', 'tasks', 'project', 'attendance'];
+            $with = ['role'];
             $condition = [];
 
             $data = self::$model::query();

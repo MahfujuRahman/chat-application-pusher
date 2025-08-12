@@ -29,5 +29,4 @@ include_once base_path("app/Modules/Management/UserManagement/Role/Routes/Route.
 | Chat Management Module
 |--------------------------------------------------------------------------
 */
-include_once base_path("app/Modules/Management/Notification/Routes/Route.php");
 include_once base_path("app/Modules/Management/Message/Routes/Route.php");

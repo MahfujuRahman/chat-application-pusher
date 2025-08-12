@@ -12,7 +12,6 @@ use App\Modules\Management\UserManagement\User\Actions\RestoreData;
 use App\Modules\Management\UserManagement\User\Actions\ImportData;
 use App\Modules\Management\UserManagement\User\Actions\UserProfileUpdate;
 use App\Modules\Management\UserManagement\User\Actions\UserChangePassword;
-use App\Modules\Management\UserManagement\User\Actions\GetUsersByProjectId;
 
 use App\Modules\Management\UserManagement\User\Validations\BulkActionsValidation;
 use App\Modules\Management\UserManagement\User\Validations\UserProfileUpdateValidation;
@@ -86,12 +85,6 @@ class Controller extends ControllersController
     public function bulkAction(BulkActionsValidation $request)
     {
         $data = BulkActions::execute($request);
-        return $data;
-    }
-    public function GetUsersByProjectId($project_id)
-    {
-       
-        $data = GetUsersByProjectId::execute($project_id);
         return $data;
     }
 }

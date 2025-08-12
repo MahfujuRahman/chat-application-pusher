@@ -1,441 +1,396 @@
 <template>
-  <div class="container-fluid">
-    <!--Start Dashboard Content-->
+  <div class="chat-dashboard">
+    <!-- Header Section -->
+    <div class="header-section">
+      <div class="welcome-card">
+        <div class="welcome-content">
+          <h1 class="welcome-title">
+            <i class="fas fa-comments"></i>
+            Welcome to Chat
+          </h1>
+          <p class="welcome-subtitle">Start conversations and connect with others</p>
+        </div>
+        <div class="welcome-actions">
+          <button @click="goToMessages" class="btn btn-primary btn-lg">
+            <i class="fas fa-comments"></i>
+            Go to Messages
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <div class="card mt-3">
-      <div class="card-content">
-        <div class="row row-group m-0">
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_users }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Users</p>
+    <!-- Quick Actions Section -->
+    <div class="quick-actions">
+      <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5 mb-4">
+          <div class="action-card" @click="goToMessages">
+            <div class="action-icon message-chat">
+              <i class="fas fa-comments"></i>
             </div>
+            <h3>Messages</h3>
+            <p>View all your conversations and start new chats</p>
           </div>
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_projects }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Projects</p>
+        </div>
+
+        <div class="col-md-6 col-lg-5 mb-4">
+          <div class="action-card" @click="startNewMessage">
+            <div class="action-icon new-message">
+              <i class="fas fa-paper-plane"></i>
             </div>
-          </div>
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_todos }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Todos</p>
-            </div>
-          </div>
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_todos }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Todos</p>
-            </div>
+            <h3>New Message</h3>
+            <p>Start a new conversation with someone</p>
           </div>
         </div>
       </div>
     </div>
-    <div class="card mt-3">
-      <div class="card-content">
-        <div class="row row-group m-0">
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_credentials }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Credentials</p>
-            </div>
+
+    <!-- Recent Chats Section -->
+    <div class="recent-chats" v-if="recentChats.length > 0">
+      <h2 class="section-title">Recent Conversations</h2>
+      <div class="chat-list">
+        <div v-for="chat in recentChats" :key="chat.id" class="chat-item" @click="openMessage(chat.id)">
+          <div class="chat-avatar">
+            <img :src="chat.avatar || '/avatar.png'" :alt="chat.name">
+            <span v-if="chat.isOnline" class="online-indicator"></span>
           </div>
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_attendance }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Attendance</p>
+          <div class="chat-info">
+            <div class="chat-header">
+              <h4 class="chat-name">{{ chat.name }}</h4>
+              <span class="chat-time">{{ formatTime(chat.lastMessage.time) }}</span>
             </div>
+            <p class="chat-preview">{{ chat.lastMessage.text }}</p>
           </div>
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_meetings }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Meetings</p>
-            </div>
-          </div>
-          <div class="col-12 col-lg-6 col-xl-3 border-light">
-            <div class="card-body">
-              <h5 class="text-white mb-0">
-                {{ data.total_meeting_agendas }}
-              </h5>
-              <div class="progress my-3" style="height: 3px"></div>
-              <p class="mb-0 text-white small-font">Total Meeting Agendas</p>
-            </div>
+          <div class="chat-meta">
+            <span v-if="chat.unreadCount > 0" class="unread-badge">
+              {{ chat.unreadCount }}
+            </span>
           </div>
         </div>
       </div>
     </div>
-    <!--End Row-->
 
-    <!--Caleder section start-->
-    <div class="calendar-container mb-5">
-      <!-- Header -->
-      <div class="calendar-header">
-        <h2><span>📅</span> Calendar</h2>
-        <div class="calendar-controls">
-          <span class="month-label">{{ currentMonthYear }}</span>
-          <input type="date" v-model="selectedDate" @change="onDateChange" />
-        </div>
-      </div>
-
-      <!-- Calendar Grid -->
-      <div class="calendar-grid">
-        <div
-          class="weekday-header"
-          v-for="day in weekdayNames"
-          :key="day"
-          :class="[
-            'weekday-header',
-            day === 'Fri' || day === 'Sat' ? 'bd-offday' : '',
-          ]"
-        >
-          {{ day }}
-        </div>
-        <div
-          v-for="n in startDayOfMonth"
-          :key="'empty-' + n"
-          class="calendar-cell empty-cell"
-        ></div>
-        <div
-          v-for="(date, index) in daysInMonth"
-          :key="index"
-          :class="calendarCellClass(date)"
-          class="position-relative"
-        >
-          <router-link
-            :to="`/meeting/all?date=${new Date(
-              date.getTime() + 24 * 60 * 60 * 1000
-            )
-              .toISOString()
-              .substr(0, 10)}`"
-          >
-            <div class="badge-container" v-if="countTodayMeetings(date) > 0">
-              <span
-                class="badge py-1"
-                style="position: absolute; top: 5px; left: 5px"
-                >M ({{ countTodayMeetings(date) }})
-              </span>
-            </div>
-          </router-link>
-          <router-link
-            :to="`/tasks/date-wise-tasks/${new Date(
-              date.getTime() + 24 * 60 * 60 * 1000
-            )
-              .toISOString()
-              .substr(0, 10)}`"
-          >
-            <div class="badge-container" v-if="countTodayTasks(date) > 0">
-              <span
-                class="badge py-1"
-                style="position: absolute; top: 5px; right: 5px"
-                >T ({{ countTodayTasks(date) }})
-              </span>
-            </div>
-          </router-link>
-          <div class="date-number">{{ date.getDate() }}</div>
-          <div class="day-name">{{ formatDay(date) }}</div>
-        </div>
-      </div>
-    </div>
-    <!--Caleder section end-->
-    <!--start overlay-->
-    <div class="overlay"></div>
-    <!--end overlay-->
   </div>
-  <!-- End container-fluid-->
 </template>
 
 <script>
 export default {
-  data: () => ({
-    data: {},
-    selectedDate: new Date().toISOString().substr(0, 10),
-    task_list_dates: [],
-    meeting_dates: [],
-  }),
-  created: async function () {
-    await this.get_all_dashboard_data();
-    await this.get_all_tasks();
-    await this.get_all_meetings();
+  name: 'ChatDashboard',
+  data() {
+    return {
+      recentChats: []
+    };
+  },
+  async created() {
+    await this.loadRecentMessages();
   },
   methods: {
-    get_all_dashboard_data: async function () {
-      let response = await axios.get("get-all-dashboard-data");
-      if (response.status == 200) {
-        this.data = response.data.data;
+    // Navigate to your existing messages page
+    goToMessages() {
+      // Update this route to match your existing messages route
+      this.$router.push('/message/conversation'); // or whatever your messages route is
+    },
+
+    // Navigate to start new message
+    startNewMessage() {
+      // Update this route to match your new message route
+      this.$router.push('/message/conversation'); // or whatever your new message route is
+    },
+
+    // Open specific message/conversation
+    openMessage(messageId) {
+      // Update this route to match your message detail route
+      this.$router.push(`/message/conversation`); // or whatever your message detail route is
+    },
+
+    // Load recent messages from your existing API
+    async loadRecentMessages() {
+      try {
+        const response = await axios.get('/messages/get-all-conversations');
+        if (response.data.status === 'success') {
+          this.recentChats = response.data.data.map(convo => ({
+            id: convo.id,
+            name: convo.is_group ? convo.group_name : (convo.participant?.name || 'Unknown'),
+            avatar: convo.participant?.image || '/avatar.png',
+            lastMessage: {
+              text: 'Tap to view conversation', // Replace with actual last message if available
+              time: new Date(convo.last_updated)
+            },
+            unreadCount: convo.unread_count || 0,
+            isOnline: convo.participant?.status === 'active'
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading recent messages:', error);
       }
     },
-    get_all_tasks: async function () {
-      let response = await axios.get("task?get_all=1");
-      if (response.status == 200) {
-        // Only keep the start_date values in the array
-        this.task_list_dates = response.data.data
-          .filter((task) => task.start_date)
-          .map((task) => task.start_date);
-      }
-    },
-    get_all_meetings: async function () {
-      let response = await axios.get("meeting?get_all=1");
-      if (response.status == 200) {
-        // Only keep the start_date values in the array
-        this.meeting_dates = response.data.data
-          .filter((meeting) => meeting.date)
-          .map((meeting) => meeting.date);
-      }
-    },
-    formatDay(date) {
-      return date.toLocaleString("default", { weekday: "long" });
-    },
-    isHoliday(date) {
-      // 5 = Friday, 6 = Saturday
-      return date.getDay() === 5 || date.getDay() === 6;
-    },
-    isToday(date) {
-      const today = new Date();
-      return (
-        date.getDate() === today.getDate() &&
-        date.getMonth() === today.getMonth() &&
-        date.getFullYear() === today.getFullYear()
-      );
-    },
-    calendarCellClass(date) {
-      // If today and holiday, use both classes
-      if (this.isToday(date) && this.isHoliday(date)) {
-        return ["calendar-cell", "today-success", "today-holiday-border"];
-      } else if (this.isToday(date)) {
-        return ["calendar-cell", "today-success"];
-      } else if (this.isHoliday(date)) {
-        return ["calendar-cell", "friday"];
+
+    formatTime(date) {
+      const now = new Date();
+      const diff = now - date;
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+      if (days > 0) {
+        return `${days}d ago`;
+      } else if (hours > 0) {
+        return `${hours}h ago`;
       } else {
-        return ["calendar-cell"];
+        return 'Just now';
       }
-    },
-    onDateChange() {
-      // The computed will auto-update
-    },
-    countTodayTasks(date) {
-      const currentDate =
-        date.getFullYear() +
-        "-" +
-        String(date.getMonth() + 1).padStart(2, "0") +
-        "-" +
-        String(date.getDate()).padStart(2, "0");
-
-      return this.task_list_dates.filter((taskDate) => {
-        const taskDay = taskDate.split(" ")[0]; // Get only YYYY-MM-DD
-        return taskDay === currentDate;
-      }).length;
-    },
-    countTodayMeetings(date) {
-      const currentDate =
-        date.getFullYear() +
-        "-" +
-        String(date.getMonth() + 1).padStart(2, "0") +
-        "-" +
-        String(date.getDate()).padStart(2, "0");
-
-      return this.meeting_dates.filter((meetingDate) => {
-        const meetingDay = meetingDate.split(" ")[0]; // Get only YYYY-MM-DD
-        return meetingDay === currentDate;
-      }).length;
-    },
-  },
-  computed: {
-    currentMonthYear() {
-      const date = new Date(this.selectedDate);
-      return date.toLocaleString("default", {
-        month: "short",
-        year: "numeric",
-      });
-    },
-    daysInMonth() {
-      const date = new Date(this.selectedDate);
-      const year = date.getFullYear();
-      const month = date.getMonth();
-      const days = [];
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-
-      for (let d = 1; d <= lastDay.getDate(); d++) {
-        days.push(new Date(year, month, d));
-      }
-
-      return days;
-    },
-    weekdayNames() {
-      return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    },
-    startDayOfMonth() {
-      const date = new Date(this.selectedDate);
-      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-      return firstDay.getDay(); // 0 (Sun) to 6 (Sat)
-    },
-  },
+    }
+  }
 };
 </script>
 
 <style scoped>
-.calendar-container {
-  color: #ffffff;
+.chat-dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
-  border-radius: 10px;
-  margin: auto;
-  font-family: Arial, sans-serif;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
 }
 
-.calendar-header {
+/* Header Section */
+.header-section {
+  margin-bottom: 40px;
+}
+
+.welcome-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
 }
 
-.calendar-header h2 {
-  font-size: 20px;
+.welcome-content h1.welcome-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2d3436;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 15px;
 }
 
-.calendar-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.welcome-title i {
+  color: #6c5ce7;
+  font-size: 2.2rem;
 }
 
-.calendar-controls input {
-  background-color: #1f2e47;
-  color: #ffffff;
-  border: 1px solid #33415c;
-  padding: 5px 10px;
-  border-radius: 5px;
+.welcome-subtitle {
+  font-size: 1.2rem;
+  color: #636e72;
+  margin: 0;
 }
 
-.month-label {
-  font-weight: bold;
-  color: #ccc;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
-}
-
-@media (max-width: 900px) {
-  .calendar-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .calendar-container {
-    padding: 8px;
-    font-size: 13px;
-  }
-  .calendar-header h2 {
-    font-size: 15px;
-  }
-  .calendar-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-  }
-  .calendar-cell {
-    padding: 18px 4px;
-    font-size: 12px;
-  }
-  .date-number {
-    font-size: 14px;
-  }
-  .day-name {
-    font-size: 10px;
-  }
-}
-
-.calendar-cell {
-  background-color: #1f2e47;
-  border: 1px solid #2a3a59;
-  padding: 40px 10px;
-  border-radius: 8px;
-  text-align: center;
-  transition: background-color 0.3s;
-}
-
-.calendar-cell:hover {
-  background-color: #2a3a59;
-}
-
-.friday {
-  background-color: #3b2a4a;
-  border: 1px solid #b4004e;
-}
-
-.today-success {
-  background-color: #198754 !important;
-  border: 1px solid #157347 !important;
-  color: #fff !important;
-}
-
-/* Red border if today is a holiday */
-.today-holiday-border {
-  border: 2px solid #ff2d2d !important;
-}
-
-.date-number {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.day-name {
-  font-size: 12px;
-  color: #ccc;
-}
-.badge {
-  background-color: #dc3545;
-  color: white;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 12px;
-  font-weight: bold;
-}
-
-.weekday-header {
-  font-weight: bold;
-  text-align: center;
-  color: #fff;
-  background: #027708;
-  padding: 8px 0px;
-  border-radius: 5px;
-}
-
-.empty-cell {
-  background: transparent;
+.welcome-actions .btn-primary {
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 50px;
+  background: linear-gradient(45deg, #6c5ce7, #a29bfe);
   border: none;
+  box-shadow: 0 8px 25px rgba(108, 92, 231, 0.3);
+  transition: all 0.3s ease;
 }
 
-.bd-offday {
-  background-color: #4d0000 !important;
+.welcome-actions .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(108, 92, 231, 0.4);
+}
+
+/* Quick Actions */
+.quick-actions {
+  margin-bottom: 40px;
+}
+
+.action-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 30px 25px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: 100%;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.action-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.action-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 2rem;
+  color: white;
+}
+
+.action-icon.message-chat {
+  background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+}
+
+.action-icon.new-message {
+  background: linear-gradient(45deg, #00b894, #00cec9);
+}
+
+.action-card h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #2d3436;
+  margin-bottom: 10px;
+}
+
+.action-card p {
+  color: #636e72;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Recent Chats */
+.recent-chats {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 30px;
+  backdrop-filter: blur(10px);
+}
+
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #2d3436;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.chat-item {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background: rgba(108, 92, 231, 0.05);
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(108, 92, 231, 0.1);
+}
+
+.chat-item:hover {
+  background: rgba(108, 92, 231, 0.1);
+  transform: translateX(5px);
+}
+
+.chat-avatar {
+  position: relative;
+  margin-right: 15px;
+}
+
+.chat-avatar img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #00b894;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.chat-info {
+  flex: 1;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.chat-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3436;
+  margin: 0;
+}
+
+.chat-time {
+  font-size: 0.9rem;
+  color: #636e72;
+}
+
+.chat-preview {
+  font-size: 0.95rem;
+  color: #636e72;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.chat-meta {
+  display: flex;
+  align-items: center;
+}
+
+.unread-badge {
+  background: #e17055;
+  color: white;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 50px;
+  font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .chat-dashboard {
+    padding: 15px;
+  }
+
+  .welcome-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 25px;
+    padding: 30px 20px;
+  }
+
+  .welcome-title {
+    font-size: 2rem !important;
+  }
+
+  .action-card {
+    padding: 25px 20px;
+  }
+
+  .chat-preview {
+    max-width: 200px;
+  }
 }
 </style>
