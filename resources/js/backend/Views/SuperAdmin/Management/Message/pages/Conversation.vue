@@ -201,7 +201,7 @@
             </div>
           </div>
           <div class="conversation-meta">
-            <span class="conversation-time">{{ formatTime(conversation.last_updated) }}</span>
+            <span class="conversation-time">{{ formatRelativeTime(conversation.updated_at) }}</span>
             <span v-if="conversation.unread_count > 0" class="unread-badge">{{ conversation.unread_count }}</span>
             <button v-if="conversation.participant?.is_group"
               class="btn btn-sm btn-outline-light group-members-btn text-white border-white"
@@ -953,6 +953,7 @@ export default {
     },
     formatTime(time) {
       if (!time) return "";
+      console.log(time);
       return new Date(time).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -973,7 +974,10 @@ export default {
       if (diffMins < 1) return "Just now";
       if (diffMins < 60) return `${diffMins} min ago`;
       if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      if (diffDays < 3) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      
+      // For older messages, show full date and time using formatTime
+      return `${messageDate.toLocaleDateString()} ${this.formatTime(time)}`;
 
       // For older messages, show date
       return messageDate.toLocaleDateString();
