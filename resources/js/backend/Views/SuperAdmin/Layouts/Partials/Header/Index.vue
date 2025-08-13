@@ -44,130 +44,8 @@
             <i class="zmdi zmdi-comment-outline align-middle"></i>
             <span v-if="unreadMessageCount > 0" class="bg-danger text-white badge-up">{{ unreadMessageCount }}</span>
           </router-link>
-          <!-- <div class="dropdown-menu dropdown-menu-right" :class="{ show: show_message }">
-            <ul class="list-group list-group-flush">
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                New Messages
-                <a href="javascript:void();" class="extra-small-font">Clear All</a>
-              </li>
-              <li class="list-group-item">
-                <a href="javaScript:void();">
-                  <div class="media">
-                    <div class="avatar">
-                      <img class="align-self-start mr-3" src="avatar.png" alt="user avatar" />
-                    </div>
-                    <div class="media-body">
-                      <h6 class="mt-0 msg-title">Jhon Deo</h6>
-                      <p class="msg-info">Lorem ipsum dolor sit amet...</p>
-                      <small>Today, 4:10 PM</small>
-                    </div>
-                  </div>
-                </a>
-              </li>
-
-              <li class="list-group-item text-center">
-                <a href="javaScript:void();">See All Messages</a>
-              </li>
-            </ul>
-          </div> -->
         </li>
 
-        <li
-          class="nav-item dropdown dropdown-lg"
-          @click="toggle_notification('show_notification')"
-        >
-          <a
-            role="button"
-            class="btn nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
-          >
-            <i class="zmdi zmdi-notifications-active align-middle"></i>
-            <span class="bg-info text-white badge-up">{{
-              notifications.length
-            }}</span>
-          </a>
-          <div
-            class="dropdown-menu dropdown-menu-right"
-            :class="{ show: show_notification }"
-          >
-            <ul class="list-group list-group-flush">
-              <li
-                class="list-group-item d-flex justify-content-between align-items-center"
-              >
-                <span class="text-info font-weight-bold"> New Projects </span>
-                <a
-                  href="javascript:void();"
-                  @click="RedirectToDestination('projects')"
-                  class="extra-small-font"
-                  >See All</a
-                >
-              </li>
-              <template
-                v-for="notification in notifications"
-                :key="notification.id"
-              >
-                <li
-                  class="list-group-item"
-                  v-if="
-                    notification.type == 'project' && notification.is_seen == 0
-                  "
-                >
-                  <a
-                    @click.prevent="
-                      handleLinkClick(notification, `/${notification.link}`)
-                    "
-                    class="cursor-pointer"
-                  >
-                    <div class="media">
-                      <div class="media-body">
-                        <h6 class="mt-0 msg-title">
-                          {{ notification.title }}
-                        </h6>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-              </template>
-
-              <li
-                class="list-group-item d-flex justify-content-between align-items-center"
-              >
-                <span class="text-info font-weight-bold"> New Tasks </span>
-                <a
-                  href="javascript:void();"
-                  @click="RedirectToDestination('tasks')"
-                  class="extra-small-font"
-                  >See All</a
-                >
-              </li>
-              <template
-                v-for="notification in notifications"
-                :key="notification.id"
-              >
-                <li
-                  class="list-group-item"
-                  v-if="
-                    notification.type == 'task' && notification.is_seen == 0
-                  "
-                >
-                  <a
-                    @click.prevent="
-                      handleLinkClick(notification, `/${notification.link}`)
-                    "
-                    class="cursor-pointer"
-                  >
-                    <div class="media">
-                      <div class="media-body">
-                        <h6 class="mt-0 msg-title">
-                          {{ notification.title }}
-                        </h6>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-              </template>
-            </ul>
-          </div>
-        </li>
 
         <li
           class="nav-item dropdown"
@@ -253,7 +131,6 @@ export default {
   }),
 
   created: async function () {
-    await this.get_all_noitifications();
     await this.getUnreadMessageCount();
     this.setupMessageListener();
   },
@@ -278,7 +155,6 @@ export default {
 
     watch: {
       headerKey(newVal, oldVal) {
-        this.get_all_noitifications();
         this.getUnreadMessageCount();
         console.log("headerKey changed, notifications and messages reloaded");
       },
@@ -308,13 +184,6 @@ export default {
         this.show_profile = this.show_profile ? 0 : 1;
         this.show_notification = 0;
         this.show_message = 0;
-      }
-    },
-
-    get_all_noitifications: async function () {
-      let response = await axios.get("notifications?not_seen=1&get_all=1");
-      if (response.status == 200) {
-        this.notifications = response.data.data;
       }
     },
 
@@ -363,33 +232,6 @@ export default {
       // The count will be updated via the event listeners above
     },
 
-    async handleLinkClick(data, link) {
-      try {
-        await axios.post(`/notifications/seen`, { data });
-        this.get_all_noitifications();
-        if (data.type == "project") {
-          this.$router.push({
-            name: `DetailsProject`,
-            params: { id: data.slug },
-          });
-        } else if (data.type == "task") {
-          this.$router.push({
-            name: `DetailsTasks`,
-            params: { id: data.slug },
-          });
-        }
-      } catch (e) {
-        // Optionally handle error
-        // this.$router.push(link);
-      }
-    },
-    RedirectToDestination(type) {
-      if (type === "tasks") {
-        this.$router.push({ name: "AllTasks" });
-      } else if (type === "projects") {
-        this.$router.push({ name: "AllProject" });
-      }
-    },
   },
 
   mounted() {

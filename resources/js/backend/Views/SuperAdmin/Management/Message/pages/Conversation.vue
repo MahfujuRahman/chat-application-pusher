@@ -324,6 +324,8 @@ export default {
       mobileView: "list", // 'list' | 'chat'
       
       echoChannels: [], // Track active Echo channels for cleanup
+      scrollThrottle: null, // Throttle scroll events
+      clickThrottle: null, // Throttle click events
     };
   },
   computed: {
@@ -357,150 +359,74 @@ export default {
   },
   methods: {
     setupEchoListeners() {
-      console.log("🔧 STEP A: setupEchoListeners called");
+      console.log("🔧 Setting up Echo listeners");
       
       const userId = this.auth_info?.id;
       if (!userId) {
-        console.error("❌ STEP A ERROR: No user ID found for Echo setup");
+        console.error("❌ No user ID found for Echo setup");
         return;
       }
 
       if (!window.Echo) {
-        console.error("❌ STEP A ERROR: Echo is not initialized");
-        console.log("Available globals:", { Echo: window.Echo, Pusher: window.Pusher });
+        console.error("❌ Echo is not initialized");
         return;
       }
 
-      console.log("✅ STEP B: Echo validation passed");
-      console.log("� Setting up listener for user ID:", userId);
-      console.log("🔑 Token exists:", !!localStorage.getItem("admin_token"));
-      console.log("🔧 Echo object:", window.Echo);
+      console.log("✅ Echo validation passed. Setting up listener for user:", userId);
       
       try {
-        // CRITICAL FIX: Force immediate callback registration
-        console.log("🔄 STEP C: Creating Echo private channel subscription");
         const channelName = `chat.${userId}`;
-        console.log("📡 Channel name:", channelName);
-        console.log("📡 Full Pusher channel name will be:", `private-${channelName}`);
+        console.log("📡 Subscribing to channel:", channelName);
         
-        // Step 1: Create the channel
+        // Create the channel first
         const channel = window.Echo.private(channelName);
         
-        // CRITICAL: Force immediate listener registration before any other operations
-        console.log("🎯 STEP C1: IMMEDIATELY adding MessageSent listener...");
-        
-        // Use the underlying Pusher channel directly to ensure callback registration
-        const pusherChannelName = `private-${channelName}`;
-        
-        // Wait for channel to be available, then bind directly
-        const bindListener = () => {
-          const pusherChannel = window.Echo.connector.pusher.channels.channels[pusherChannelName];
-          if (pusherChannel) {
-            console.log("📡 DIRECT PUSHER: Binding MessageSent to channel");
-            pusherChannel.bind('MessageSent', (e) => {
-              console.log("🎉 DIRECT PUSHER: RECEIVED MessageSent event!", e);
-              console.log("📨 Raw event data:", e);
-              console.log("📨 Event timestamp:", new Date().toISOString());
-              console.log("📨 Calling handleIncomingMessage...");
-              this.handleIncomingMessage(e);
-            });
-            
-            console.log("✅ Direct Pusher binding completed");
-            
-            // Verify the binding worked
-            setTimeout(() => {
-              console.log("🔍 Verifying direct binding:", {
-                channelCallbacks: pusherChannel.callbacks,
-                hasMessageSent: !!pusherChannel.callbacks.MessageSent
-              });
-            }, 100);
-          } else {
-            console.log("⏳ Pusher channel not ready, retrying in 100ms...");
-            setTimeout(bindListener, 100);
-          }
-        };
-        
-        // Try Echo's listen method as well (backup)
-        console.log("🔄 STEP C2: Also adding Echo listen method (backup)...");
-        channel.listen("MessageSent", (e) => {
-          console.log("🎉 ECHO METHOD: RECEIVED MessageSent event!");
-          console.log("📨 Raw event data:", e);
+        // Add the listener using a separate call to ensure it's registered
+        channel.listen('MessageSent', (e) => {
+          console.log("🎉 RECEIVED MessageSent event!", e);
           this.handleIncomingMessage(e);
-        });
-        
-        // Start the direct binding process
-        bindListener();
-        
-        // Step 3: Add error handler
-        console.log("🚨 STEP C3: Adding error handler...");
-        channel.error((error) => {
-          console.error("❌ STEP C ERROR: Pusher subscription error:", error);
-          console.error("Error type:", error.type);
-          console.error("Error info:", error.error);
-          if (error.type === 'AuthError') {
-            console.error("🚫 Authentication failed - Token might be invalid");
-            console.error("Current token:", localStorage.getItem("admin_token")?.substring(0, 20) + "...");
-            alert("Authentication failed. Please refresh and try again.");
+          
+          // Show real-time notification if message is from another user
+          if (e.sender && e.sender.id !== this.auth_info.id) {
+            window.s_alert(`💬 ${e.sender.name}: ${e.text.substring(0, 50)}...`);
           }
         });
         
-        // Step 4: Add subscribed handler
-        console.log("✅ STEP C4: Adding subscription success handler...");
+        // Add event handlers
         channel.subscribed(() => {
-          console.log("✅ STEP D: Successfully subscribed to", channelName);
-          console.log("🎯 Now listening for MessageSent events on this channel");
+          console.log("✅ Successfully subscribed to:", channelName);
           
-          // Force another direct bind after subscription
+          // Double-check that the listener is registered
           setTimeout(() => {
+            const pusherChannelName = `private-${channelName}`;
             const pusherChannel = window.Echo.connector.pusher.channels.channels[pusherChannelName];
-            if (pusherChannel && !pusherChannel.callbacks.MessageSent) {
-              console.log("🔄 BACKUP: Force-binding MessageSent after subscription");
-              pusherChannel.bind('MessageSent', (e) => {
-                console.log("🎉 BACKUP BIND: RECEIVED MessageSent event!", e);
-                this.handleIncomingMessage(e);
-              });
+            if (pusherChannel) {
+              console.log("📊 Channel callbacks after subscription:", pusherChannel.callbacks);
+              if (pusherChannel.callbacks && pusherChannel.callbacks.MessageSent) {
+                console.log("✅ MessageSent callback is properly registered!");
+              } else {
+                console.log("❌ MessageSent callback is NOT registered, forcing registration...");
+                // Force bind if not registered
+                pusherChannel.bind('MessageSent', (e) => {
+                  console.log("🎉 FORCE BIND: RECEIVED MessageSent event!", e);
+                  this.handleIncomingMessage(e);
+                });
+              }
             }
-            
-            // Final verification
-            const channelInfo = window.Echo.connector.channels[pusherChannelName];
-            console.log("📊 Final callback check:", {
-              echoChannelCallbacks: channelInfo?.callbacks,
-              pusherChannelCallbacks: pusherChannel?.callbacks,
-              hasMessageSent: !!(pusherChannel?.callbacks?.MessageSent || channelInfo?.callbacks?.MessageSent)
-            });
           }, 500);
+        });
+        
+        channel.error((error) => {
+          console.error("❌ Subscription error:", error);
+          if (error.type === 'AuthError') {
+            window.s_alert("Authentication failed. Please refresh the page.", "error");
+          }
         });
           
         this.echoChannels.push({ channel, name: channelName });
-        console.log("✅ STEP E: Echo listener setup completed");
-        console.log("📊 Total active channels:", this.echoChannels.length);
-        
-        // Test if the channel is actually listening
-        setTimeout(() => {
-          console.log("🔍 STEP F: Channel state verification (after 1 second)");
-          const pusherChannelName = `private-${channelName}`;
-          const hasChannel = !!window.Echo.connector.channels[pusherChannelName];
-          const channelInfo = window.Echo.connector.channels[pusherChannelName];
-          
-          console.log("Channel details:", {
-            expectedPusherChannelName: pusherChannelName,
-            channelExists: hasChannel,
-            allChannels: Object.keys(window.Echo.connector.channels),
-            callbacks: channelInfo?.callbacks || 'No callbacks found',
-            callbackCount: channelInfo?.callbacks ? Object.keys(channelInfo.callbacks).length : 0
-          });
-          
-          if (hasChannel && channelInfo?.callbacks?.MessageSent) {
-            console.log("✅ MessageSent callback is properly registered");
-          } else {
-            console.log("❌ MessageSent callback is NOT registered!");
-            console.log("Available callbacks:", channelInfo?.callbacks ? Object.keys(channelInfo.callbacks) : 'None');
-          }
-        }, 1000);
         
       } catch (error) {
-        console.error("❌ STEP C ERROR: Exception setting up Echo listeners:", error);
-        console.error("Stack trace:", error.stack);
+        console.error("❌ Echo setup error:", error);
       }
     },
     
@@ -817,16 +743,22 @@ export default {
     },
 
     onChatScroll() {
-      // Mark messages as read when user scrolls in the chat
-      if (this.pendingMarkAsRead) {
-        this.checkAndMarkAsRead();
+      // Mark messages as read when user scrolls in the chat (throttled)
+      if (this.pendingMarkAsRead && !this.scrollThrottle) {
+        this.scrollThrottle = setTimeout(() => {
+          this.checkAndMarkAsRead();
+          this.scrollThrottle = null;
+        }, 1000); // Throttle to max once per second
       }
     },
 
     onChatClick() {
-      // Mark messages as read when user clicks in the chat area
-      if (this.pendingMarkAsRead) {
-        this.checkAndMarkAsRead();
+      // Mark messages as read when user clicks in the chat area (throttled)
+      if (this.pendingMarkAsRead && !this.clickThrottle) {
+        this.clickThrottle = setTimeout(() => {
+          this.checkAndMarkAsRead();
+          this.clickThrottle = null;
+        }, 500); // Throttle to max once per 500ms
       }
     },
 
@@ -1073,8 +1005,22 @@ export default {
   beforeUnmount() {
     window.removeEventListener("resize", this.handleResize);
     document.removeEventListener("click", this.handleClickOutside);
+    
     // Cancel any pending mark as read
     this.pendingMarkAsRead = null;
+    
+    // Clear throttle timers
+    if (this.scrollThrottle) {
+      clearTimeout(this.scrollThrottle);
+      this.scrollThrottle = null;
+    }
+    if (this.clickThrottle) {
+      clearTimeout(this.clickThrottle);
+      this.clickThrottle = null;
+    }
+    
+    // Cleanup Echo listeners
+    this.cleanupEchoListeners();
   },
 };
 </script>
