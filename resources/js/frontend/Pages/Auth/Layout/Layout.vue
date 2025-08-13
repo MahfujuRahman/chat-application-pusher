@@ -102,7 +102,7 @@ export default {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   width: 100%;
-  max-width: 450px;
+  /* max-width: 450px; */
   overflow: hidden;
   position: relative;
 }

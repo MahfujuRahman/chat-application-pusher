@@ -1,112 +1,109 @@
 <template>
+  <Head>
+    <title>Register</title>
+  </Head>
   <Layout>
-    <div class="row justify-content-center align-items-center py-5">
-      <div class="col-md-6">
-        <form @submit.prevent="RegisterSubmitHandler">
-          <h3>Register Here</h3>
+    <div class="professional-login-container">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="brand-section">
+            <div class="brand-icon">
+              <i class="fas fa-user-plus"></i>
+            </div>
+            <h2 class="brand-title">Project Management</h2>
+            <p class="brand-subtitle">Create your account</p>
+          </div>
+        </div>
+        <form @submit.prevent="RegisterSubmitHandler" class="login-form">
           <div class="form-group">
-            <label for="name">Name</label>
+            <label for="name" class="form-label">
+              <i class="fas fa-user"></i>
+              Name
+            </label>
             <input
               class="form-control"
-              type="name"
-              placeholder="  name"
+              type="text"
+              placeholder="Enter your name"
               name="name"
-              onchange="errorReset(event)"
+              v-model="name"
+              required
             />
             <p class="alert-danger" id="name"></p>
           </div>
           <div class="form-group">
-            <label for="phone">Phone</label>
+            <label for="phone" class="form-label">
+              <i class="fas fa-phone"></i>
+              Phone
+            </label>
             <input
               class="form-control"
-              type="phone"
-              placeholder="  phone"
+              type="text"
+              placeholder="Enter your phone"
               name="phone_number"
-              onchange="errorReset(event)"
+              v-model="phone_number"
+              required
             />
             <p class="alert-danger" id="phone"></p>
           </div>
           <div class="form-group">
-            <label for="email">Email</label>
+            <label for="email" class="form-label">
+              <i class="fas fa-envelope"></i>
+              Email
+            </label>
             <input
               class="form-control"
               type="email"
-              placeholder="  email"
+              placeholder="Enter your email"
               name="email"
-              onchange="errorReset(event)"
+              v-model="email"
+              required
             />
             <p class="alert-danger" id="email"></p>
           </div>
           <div class="form-group">
-            <label for="password">Password</label>
-            <div class="password-icon">
-              <input
-                class="form-control"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="  password"
-                name="password"
-                value="@12345678"
-                onchange="errorReset(event)"
-              />
-              <i
-                class="fa-solid fa-eye-slash"
-                :class="{ 'fa-eye': showPassword }"
-                @click="showPassword = !showPassword"
-              ></i>
-            </div>
-
+            <label for="password" class="form-label">
+              <i class="fas fa-lock"></i>
+              Password
+            </label>
+            <input
+              class="form-control"
+              type="password"
+              placeholder="Enter your password"
+              name="password"
+              v-model="password"
+              required
+            />
             <p class="alert-danger" id="password"></p>
           </div>
-
-          <button
-            class="my-4 btn btn-outline-success"
-            type="submit"
-            id="spiner"
-          >
-            <span v-if="!loading">Register</span>
-            <template v-if="loading">
-              <span
-                class="spinner-border spinner-border-sm mx-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              <span class="">Loading...</span>
-            </template>
+          <button class="login-button" type="submit">
+            <span class="button-content">
+              <i class="fas fa-user-plus"></i>
+              Register
+            </span>
           </button>
-          <span>Dont have an account ?</span>
-          <Link href="/login" class="font-size-12 text-primary"> Login</Link>
-          <br />
-          <Link href="/forgot-password" class="text-info"
-            >Forgot Password ?</Link
-          >
         </form>
+        <div class="login-footer">
+          <p class="footer-text">
+            Already have an account?
+            <Link href="/login" class="signup-link">Login</Link>
+          </p>
+        </div>
       </div>
-      <!-- <div class="col-md-6">
-                    <div id="userList">
-                        <table class="table table-dark table-striped table-hover  table-bordered">
-                            <thead class="sticky-top">
-                                <tr>
-                                    <th scope="col">Email</th>
-                                    <th scope="col">Password</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-
-                            </tbody>
-                        </table>
-                    </div>
-                </div> -->
     </div>
   </Layout>
 </template>
+
 <script>
 import Layout from "./Layout/Layout.vue";
+import { Link } from "@inertiajs/vue3";
 export default {
-  components: { Layout },
-
+  components: { Layout, Link },
   data() {
     return {
+      name: "",
+      phone_number: "",
+      email: "",
+      password: "",
       showPassword: false,
       loading: false,
     };
@@ -122,8 +119,16 @@ export default {
         if (response.data?.status === "success") {
           let data = response.data?.data;
           if (data.access_token) {
-            localStorage.setItem("user_token", data.access_token);
-            window.location.href = "/";
+            window.s_alert("Register Successfully");
+            localStorage.setItem("admin_token", data.access_token);
+            localStorage.setItem("admin_role", data.user?.role_id);
+            if (data.user?.role_id == 1) {
+              window.location.href = "super-admin#/dashboard";
+            } else if (data.user?.role_id == 2) {
+              window.location.href = "employee#/dashboard";
+            } else {
+              window.location.href = "/";
+            }
           }
         }
       } catch (error) {
@@ -135,3 +140,4 @@ export default {
   },
 };
 </script>
+

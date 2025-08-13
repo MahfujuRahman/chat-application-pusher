@@ -73,7 +73,7 @@
         <div class="login-footer">
           <p class="footer-text">
             Don't have an account?
-            <a href="#" class="signup-link">Contact Administrator</a>
+            <Link href="/register" class="signup-link">Register</Link>
           </p>
         </div>
       </div>
