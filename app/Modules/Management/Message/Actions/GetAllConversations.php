@@ -45,11 +45,28 @@ class GetAllConversations
                     // Add unread count to conversation
                     $conversation->unread_count = $unreadCount;
 
+                    // Get the last message for this conversation
+                    $lastMessage = \App\Modules\Management\Message\Models\Model::where('conversation_id', $conversation->id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    
+                    if ($lastMessage) {
+                        $conversation->last_message = $lastMessage->text;
+                        $conversation->last_updated = $lastMessage->created_at;
+                    } else {
+                        $conversation->last_message = null;
+                        $conversation->last_updated = $conversation->updated_at;
+                    }
+
                     unset($conversation->creatorUser);
                     unset($conversation->participantUser);
 
                     return $conversation;
-                });
+                })
+                ->sortByDesc(function ($conversation) {
+                    return $conversation->last_updated ?? $conversation->updated_at;
+                })
+                ->values(); // Reset array keys after sorting
 
             // ✅ Return the final data as response
             return entityResponse($data);

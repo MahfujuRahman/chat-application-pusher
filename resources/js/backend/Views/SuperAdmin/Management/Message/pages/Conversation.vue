@@ -199,9 +199,12 @@
                 ({{ conversation.participant.participants_count }} members)
               </span>
             </div>
+            <div class="conversation-last-message">
+              {{ conversation.last_message || 'No messages yet' }}
+            </div>
           </div>
           <div class="conversation-meta">
-            <span class="conversation-time">{{ formatRelativeTime(conversation.updated_at) }}</span>
+            <span class="conversation-time">{{ formatRelativeTime(conversation.last_updated || conversation.updated_at) }}</span>
             <span v-if="conversation.unread_count > 0" class="unread-badge">{{ conversation.unread_count }}</span>
             <button v-if="conversation.participant?.is_group"
               class="btn btn-sm btn-outline-light group-members-btn text-white border-white"
@@ -628,7 +631,38 @@ export default {
         });
       }
 
+      // Update sidebar for any new message (current conversation or not) - moved outside to always update
+      if (messageData.id) {
+        this.updateConversationInSidebar(messageData);
+      }
+
       console.log("🏁 STEP R9: handleIncomingMessage completed");
+    },
+
+    updateConversationInSidebar(messageData) {
+      console.log("📋 Updating sidebar with message:", messageData);
+      
+      // Find the conversation in the sidebar
+      const conversationIndex = this.conversations.findIndex(
+        (c) => c.id === messageData.conversation_id
+      );
+      
+      if (conversationIndex !== -1) {
+        // Update the conversation with new message data
+        const updatedConversation = {
+          ...this.conversations[conversationIndex],
+          last_message: messageData.text || messageData.message,
+          last_updated: messageData.created_at || messageData.date_time || new Date().toISOString(),
+        };
+        
+        // Remove from current position and add to beginning (most recent)
+        this.conversations.splice(conversationIndex, 1);
+        this.conversations.unshift(updatedConversation);
+        
+        console.log("✅ Sidebar updated successfully");
+      } else {
+        console.log("⚠️ Conversation not found in sidebar");
+      }
     },
 
     handleTypingEvent(e) {
@@ -905,6 +939,9 @@ export default {
 
         console.log("🎯 STEP 5: Message sent successfully. Backend should now broadcast to receiver.");
         console.log("📡 Expected broadcast channel:", `private-chat.${this.getReceiverId()}`);
+        
+        // Update sidebar with the new message
+        this.updateConversationInSidebar(res.data.data);
 
       } catch (err) {
         console.error("❌ STEP ERROR: Failed to send message", err);
