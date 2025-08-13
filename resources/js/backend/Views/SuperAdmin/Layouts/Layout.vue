@@ -1,17 +1,24 @@
 <template>
-    <side-bar></side-bar>
-    <div class="page-body">
+    <!-- <side-bar></side-bar> -->
+    <!-- <div class="page-body"> -->
         <div class="container-fluid">
             <router-view></router-view>
         </div>
-    </div>
+    <!-- </div> -->
 </template>
 
 <script>
-import SideBar from './Partials/Sidebar/Index.vue';
+// import SideBar from './Partials/Sidebar/Index.vue';
 export default {
-    components: { SideBar },
+    // components: { SideBar },
 }
 </script>
 
-<style></style>
+<style scoped>
+  .content-wrapper {
+        margin-left: 0px !important;
+        padding-left: 0px;
+        padding-right: 0px;
+    }
+</style>
+

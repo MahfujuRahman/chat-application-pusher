@@ -526,10 +526,6 @@ small {
         width: 70px;
     }
 
-    #wrapper.toggled:not(.sidebar-hovered) .content-wrapper {
-        margin-left: 70px;
-    }
-
     #wrapper.toggled:not(.sidebar-hovered) .toggle-menu {
         margin-left: 70px;
     }
@@ -574,7 +570,6 @@ small {
 
 /* Page Content Wrapper */
 .content-wrapper {
-    margin-left: 250px;
     padding-top: 40px;
     /* padding-left: 10px; */
     /* padding-right: 10px; */
@@ -6434,11 +6429,6 @@ table.grid td {
         margin-left: 0px;
     }
 
-    #wrapper.toggled .content-wrapper {
-        margin-left: 0px;
-
-    }
-
     #wrapper.toggled .footer {
         position: absolute;
         left: 0px;
@@ -6552,13 +6542,6 @@ table.grid td {
 
 }
 
-.content-wrapper {
-    margin-left: 125px;
-}
-
-#wrapper.toggled:not(.sidebar-hovered) .content-wrapper {
-    margin-left: 35px;
-}
 
 .card-body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);

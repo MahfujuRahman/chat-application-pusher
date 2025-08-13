@@ -81,4 +81,10 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped>
+  .content-wrapper{
+        margin-left: 0px !important;
+        padding-left: 0px;
+        padding-right: 0px;
+    }
+</style>
