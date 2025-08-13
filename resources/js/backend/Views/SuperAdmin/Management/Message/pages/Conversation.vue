@@ -621,6 +621,13 @@ export default {
         } else {
           console.log("🔄 STEP R7: Message from different conversation, refreshing list");
           this.loadConversations();
+          
+          // Show notification for messages from other conversations
+          if (senderData?.id !== this.auth_info.id) {
+            // Only show notification if message is from someone else (not current user)
+            const senderName = senderData?.name || 'Someone';
+            window.s_alert(`New message from ${senderName}`);
+          }
         }
       } else {
         console.log("⚠️ STEP R6: Message skipped", {
