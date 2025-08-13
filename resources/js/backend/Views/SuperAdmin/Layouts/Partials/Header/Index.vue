@@ -14,14 +14,6 @@
       <div class="search-bar flex-grow-1"></div>
 
       <ul class="navbar-nav align-items-center right-nav-link ml-auto">
-        <li class="nav-item">
-          <router-link :to="{ name: 'ConversationMessage' }" class="btn nav-link position-relative"
-            title="Go to Messages" @click="resetUnreadMessageCount">
-            <i class="zmdi zmdi-comment-outline align-middle"></i>
-            <span v-if="unreadMessageCount > 0" class="bg-danger text-white badge-up">{{ unreadMessageCount }}</span>
-          </router-link>
-        </li>
-
 
         <li class="nav-item dropdown" @click="toggle_notification('show_profile')">
           <a class="btn nav-link dropdown-toggle dropdown-toggle-nocaret position-relative">
@@ -89,11 +81,6 @@ export default {
     notifications: [],
     unreadMessageCount: 0,
   }),
-
-  created: async function () {
-    await this.getUnreadMessageCount();
-    this.setupMessageListener();
-  },
 
   methods: {
     toggle_menu: function () {

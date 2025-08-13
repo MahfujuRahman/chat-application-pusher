@@ -204,7 +204,8 @@
             </div>
           </div>
           <div class="conversation-meta">
-            <span class="conversation-time">{{ formatRelativeTime(conversation.last_updated || conversation.updated_at) }}</span>
+            <span class="conversation-time">{{ formatRelativeTime(conversation.last_updated || conversation.updated_at)
+            }}</span>
             <span v-if="conversation.unread_count > 0" class="unread-badge">{{ conversation.unread_count }}</span>
             <button v-if="conversation.participant?.is_group"
               class="btn btn-sm btn-outline-light group-members-btn text-white border-white"
@@ -227,14 +228,12 @@
           <img v-if="activeConversation?.participant?.image" class="avatar"
             :src="activeConversation?.participant?.image" @error="$event.target.src = 'avatar.png'" />
 
-            <div v-if="activeConversation?.participant?.name" class="avatar"
-              :class="{ 'group-avatar': activeConversation?.participant?.is_group }">
-              <i v-if="activeConversation?.participant?.is_group" class="fa fa-users"></i>
-              <span v-else>{{ getInitials(activeConversation?.participant?.name) }}</span>
-            </div>
-            <div v-else class="avatar" style="padding: 15px;">
-              <i class="fa fa-user"></i>
-            </div>
+          <div v-else class="avatar" :class="{ 'group-avatar': activeConversation?.participant?.is_group }">
+            <i v-if="!activeConversation?.participant?.name" class="fa fa-user"></i>
+            <i v-else-if="activeConversation?.participant?.is_group" class="fa fa-users"></i>
+            <span v-else>{{ getInitials(activeConversation?.participant?.name) }}</span>
+          </div>
+
 
           {{ activeConversation?.participant?.name || "" }}
         </div>
@@ -621,7 +620,7 @@ export default {
         } else {
           console.log("🔄 STEP R7: Message from different conversation, refreshing list");
           this.loadConversations();
-          
+
           // Show notification for messages from other conversations
           if (senderData?.id !== this.auth_info.id) {
             // Only show notification if message is from someone else (not current user)
@@ -648,12 +647,12 @@ export default {
 
     updateConversationInSidebar(messageData) {
       console.log("📋 Updating sidebar with message:", messageData);
-      
+
       // Find the conversation in the sidebar
       const conversationIndex = this.conversations.findIndex(
         (c) => c.id === messageData.conversation_id
       );
-      
+
       if (conversationIndex !== -1) {
         // Update the conversation with new message data
         const updatedConversation = {
@@ -661,11 +660,11 @@ export default {
           last_message: messageData.text || messageData.message,
           last_updated: messageData.created_at || messageData.date_time || new Date().toISOString(),
         };
-        
+
         // Remove from current position and add to beginning (most recent)
         this.conversations.splice(conversationIndex, 1);
         this.conversations.unshift(updatedConversation);
-        
+
         console.log("✅ Sidebar updated successfully");
       } else {
         console.log("⚠️ Conversation not found in sidebar");
@@ -946,7 +945,7 @@ export default {
 
         console.log("🎯 STEP 5: Message sent successfully. Backend should now broadcast to receiver.");
         console.log("📡 Expected broadcast channel:", `private-chat.${this.getReceiverId()}`);
-        
+
         // Update sidebar with the new message
         this.updateConversationInSidebar(res.data.data);
 
@@ -1019,7 +1018,7 @@ export default {
       if (diffMins < 60) return `${diffMins} min ago`;
       if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
       if (diffDays < 3) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-      
+
       // For older messages, show full date and time using formatTime
       return `${messageDate.toLocaleDateString()} ${this.formatTime(time)}`;
 
