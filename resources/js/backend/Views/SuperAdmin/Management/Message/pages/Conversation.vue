@@ -268,22 +268,76 @@
       </div>
 
       <div class="chat-messages" ref="chatMessages" @scroll="onChatScroll" @click="onChatClick">
-        <div v-if="messages.length === 0" class="text-center text-muted mt-4">No messages yet.</div>
-        <div v-for="message in messages" :key="message.id" :class="['chat-bubble', message.type === 'mine' ? 'mine' : 'theirs']">
-          <!-- Show sender name for group chats (except for own messages) -->
-          <div v-if="activeConversation?.participant?.is_group && message.type === 'theirs'" class="chat-sender-name">
+        <!-- Load More Messages Button -->
+        <div v-if="hasMoreMessages && !loadingMessages" class="text-center mb-3">
+          <button 
+            @click="loadMoreMessages" 
+            :disabled="loadingMoreMessages"
+            class="btn btn-outline-secondary btn-sm"
+          >
+            <span v-if="loadingMoreMessages">Loading...</span>
+            <span v-else>Load More Messages</span>
+          </button>
+        </div>
+
+        <!-- Loading Messages Indicator -->
+        <div v-if="loadingMessages" class="text-center">
+          <span>Loading messages...</span>
+        </div>
+        
+        <!-- Messages List with Previous Bubble Design -->
+        <div v-for="message in messages" :key="message.id" class="chat-bubble" :class="message.type">
+          <!-- Sender name for group chats -->
+          <div v-if="message.type === 'theirs' && activeConversation?.participant?.is_group" class="chat-sender-name">
             {{ message.sender?.name }}
           </div>
-          <div class="chat-text">{{ message.text }}</div>
+          
+          <!-- Message content -->
+          <div>{{ message.text }}</div>
+          
+          <!-- Message time -->
           <div class="chat-meta">
-            <span class="chat-time">{{ formatTime(message.created_at) }}</span>
+            <span>{{ formatRelativeTime(message.created_at) }}</span>
           </div>
+        </div>
+        
+        <!-- Typing Indicator -->
+        <div v-if="isTyping && typingUser" class="chat-bubble theirs typing-indicator">
+          <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span class="typing-text">{{ typingUser.name }} is typing...</span>
         </div>
       </div>
 
-      <form v-if="activeConversation" class="chat-input-area" @submit.prevent="sendMessage">
-        <textarea class="chat-input" placeholder="Type a message..." v-model.trim="newMessage" :disabled="!activeConversation" />
-        <button type="submit" class="btn btn-primary chat-send-btn" :disabled="!newMessage || !activeConversation">Send</button>
+      <!-- Chat Input Area -->
+      <form v-if="activeConversation" class="chat-input-container" @submit.prevent="sendMessage">
+        <div class="chat-input-wrapper">
+          <textarea 
+            ref="messageInput"
+            v-model.trim="newMessage" 
+            class="chat-input" 
+            placeholder="Type your message..." 
+            :disabled="!activeConversation || sendingMessage"
+            @keydown="handleInputKeydown"
+            @input="handleTyping"
+            rows="1"
+          ></textarea>
+          
+          <!-- Send Button -->
+          <button 
+            type="submit" 
+            class="send-button" 
+            :disabled="!newMessage || !activeConversation || sendingMessage"
+            :class="{ 'sending': sendingMessage }"
+          >
+            <div v-if="sendingMessage" class="sending-spinner"></div>
+            <i v-else class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+        
       </form>
     </div>
 
@@ -326,6 +380,18 @@ export default {
       echoChannels: [], // Track active Echo channels for cleanup
       scrollThrottle: null, // Throttle scroll events
       clickThrottle: null, // Throttle click events
+      
+      // Enhanced UI states
+      loadingMessages: false,
+      loadingMoreMessages: false,
+      sendingMessage: false,
+      hasMoreMessages: false,
+      currentPage: 1,
+      isTyping: false,
+      typingUser: null,
+      userIsTyping: false,
+      typingTimeout: null,
+      typingDebounce: null,
     };
   },
   computed: {
@@ -392,6 +458,12 @@ export default {
           }
         });
         
+        // Add typing listener - REMOVE THIS as we'll use conversation channels
+        // channel.listen('UserTyping', (e) => {
+        //   console.log("⌨️ RECEIVED UserTyping event!", e);
+        //   this.handleTypingEvent(e);
+        // });
+        
         // Add event handlers
         channel.subscribed(() => {
           console.log("✅ Successfully subscribed to:", channelName);
@@ -441,6 +513,68 @@ export default {
         }
       });
       this.echoChannels = [];
+    },
+    
+    // Setup conversation-specific listeners when a conversation is opened
+    setupConversationListeners(conversationId) {
+      if (!window.Echo || !conversationId) return;
+      
+      console.log("🔧 Setting up conversation listeners for conversation:", conversationId);
+      
+      // Check if we already have a listener for this conversation
+      const existingChannel = this.echoChannels.find(ch => ch.name === `conversation.${conversationId}`);
+      if (existingChannel) {
+        console.log("⚠️ Conversation channel already exists, skipping setup");
+        return;
+      }
+      
+      try {
+        const channelName = `conversation.${conversationId}`;
+        console.log("📡 Subscribing to conversation channel:", channelName);
+        
+        // Create the conversation channel
+        const channel = window.Echo.private(channelName);
+        
+        // Listen for typing events on this conversation
+        channel.listen('UserTyping', (e) => {
+          console.log("⌨️ RECEIVED UserTyping event on conversation channel!", e);
+          this.handleTypingEvent(e);
+        });
+        
+        // Add callback registration check
+        channel.subscribed(() => {
+          console.log("✅ Successfully subscribed to conversation channel:", channelName);
+          
+          // Double-check callback registration after subscription
+          setTimeout(() => {
+            const pusherChannelName = `private-${channelName}`;
+            const pusherChannel = window.Echo.connector.pusher.channels.channels[pusherChannelName];
+            if (pusherChannel && pusherChannel.callbacks && pusherChannel.callbacks.UserTyping) {
+              console.log("✅ UserTyping callback is properly registered on conversation channel!");
+            } else {
+              console.log("❌ UserTyping callback NOT registered, force binding...");
+              // Force bind the callback
+              if (pusherChannel) {
+                pusherChannel.bind('UserTyping', (e) => {
+                  console.log("🎉 FORCE BIND: RECEIVED UserTyping event!", e);
+                  this.handleTypingEvent(e);
+                });
+              }
+            }
+          }, 100);
+        });
+        
+        // Handle subscription errors
+        channel.error((error) => {
+          console.error("❌ Conversation channel subscription error:", error);
+        });
+        
+        // Store channel info for cleanup
+        this.echoChannels.push({ channel, name: channelName });
+        
+      } catch (error) {
+        console.error("❌ Conversation Echo setup error:", error);
+      }
     },
     
     handleIncomingMessage(e) {
@@ -516,6 +650,51 @@ export default {
       
       console.log("🏁 STEP R9: handleIncomingMessage completed");
     },
+    
+    handleTypingEvent(e) {
+      console.log("⌨️ Handling typing event:", e);
+      
+      // Don't show typing indicator for current user
+      if (e.user?.id === this.auth_info.id) {
+        console.log("⌨️ Ignoring typing event for current user");
+        return;
+      }
+      
+      // Only show typing for active conversation
+      if (e.conversation_id !== this.activeConversation?.id) {
+        console.log("⌨️ Typing event for different conversation, ignoring");
+        return;
+      }
+      
+      if (e.is_typing) {
+        // User started typing
+        this.isTyping = true;
+        this.typingUser = e.user;
+        
+        // Clear any existing typing timeout
+        if (this.typingTimeout) {
+          clearTimeout(this.typingTimeout);
+        }
+        
+        // Auto-hide typing indicator after 3 seconds
+        this.typingTimeout = setTimeout(() => {
+          this.isTyping = false;
+          this.typingUser = null;
+          this.typingTimeout = null;
+        }, 3000);
+        
+      } else {
+        // User stopped typing
+        this.isTyping = false;
+        this.typingUser = null;
+        
+        if (this.typingTimeout) {
+          clearTimeout(this.typingTimeout);
+          this.typingTimeout = null;
+        }
+      }
+    },
+    
     async loadConversations() {
       try {
         const res = await axios.get("/messages/get-all-conversations");
@@ -584,15 +763,44 @@ export default {
       
       // Cancel any pending mark as read for previous conversation
       this.pendingMarkAsRead = null;
+      this.loadingMessages = true;
+      this.currentPage = 1; // Reset to first page
+      
+      // Clean up previous conversation listeners (keep personal channel)
+      this.echoChannels = this.echoChannels.filter(({ channel, name }) => {
+        if (name.startsWith('conversation.')) {
+          try {
+            window.Echo.leave(name);
+            console.log(`✅ Left previous conversation channel: ${name}`);
+            return false; // Remove from array
+          } catch (error) {
+            console.error(`❌ Error leaving channel ${name}:`, error);
+            return false;
+          }
+        }
+        return true; // Keep personal channels
+      });
       
       this.activeConversation = convo;
+      
+      // Setup conversation-specific Echo listeners
+      this.setupConversationListeners(convo.id);
+      
       try {
-        const res = await axios.get(`/messages/get-conversation-messages/${convo.id}`);
-        this.messages = res.data.data.map((m) => ({
+        const res = await axios.get(`/messages/get-conversation-messages/${convo.id}?page=1&per_page=20`);
+        const messages = res.data.data.map((m) => ({
           ...m,
           type: m.sender?.id === this.auth_info.id ? "mine" : "theirs",
+          sent: true, // Mark existing messages as sent
         }));
-        this.scrollToBottom();
+        
+        this.messages = messages;
+        this.hasMoreMessages = res.data.data.length === 20; // If we got 20 messages, there might be more
+        
+        // Auto-scroll to bottom
+        this.$nextTick(() => {
+          this.scrollToBottom();
+        });
 
         // Store unread count for later processing
         this.pendingMarkAsRead = convo.unread_count > 0 ? convo.id : null;
@@ -612,15 +820,61 @@ export default {
         }
 
         if (this.isMobile) this.mobileView = "chat";
+        
+        // Set focus to input
+        this.$nextTick(() => {
+          if (this.$refs.messageInput) {
+            this.$refs.messageInput.focus();
+          }
+        });
+        
       } catch (err) {
         console.error("Failed to load messages", err);
+        window.s_alert("Failed to load messages", "error");
+      } finally {
+        this.loadingMessages = false;
+      }
+    },
+    
+    async loadMoreMessages() {
+      if (!this.activeConversation || this.loadingMoreMessages) return;
+      
+      this.loadingMoreMessages = true;
+      
+      try {
+        this.currentPage += 1;
+        const res = await axios.get(`/messages/get-conversation-messages/${this.activeConversation.id}?page=${this.currentPage}&per_page=20`);
+        const moreMessages = res.data.data.map((m) => ({
+          ...m,
+          type: m.sender?.id === this.auth_info.id ? "mine" : "theirs",
+          sent: true,
+        }));
+        
+        // Prepend older messages to the beginning of the array
+        this.messages = [...moreMessages, ...this.messages];
+        
+        // Check if there are more messages
+        this.hasMoreMessages = res.data.data.length === 20;
+        
+      } catch (err) {
+        console.error("Failed to load more messages", err);
+        window.s_alert("Failed to load more messages", "error");
+        this.currentPage -= 1; // Revert page increment on error
+      } finally {
+        this.loadingMoreMessages = false;
       }
     },
     async sendMessage() {
-      if (!this.newMessage) return;
+      if (!this.newMessage || this.sendingMessage) return;
+      
+      // Clear typing status
+      this.stopTyping();
+      
+      const messageText = this.newMessage;
+      const tempId = Date.now(); // Temporary ID for optimistic UI
       
       console.log("🚀 STEP 1: Starting sendMessage process");
-      console.log("📝 Message content:", this.newMessage);
+      console.log("📝 Message content:", messageText);
       console.log("👤 Sender ID:", this.auth_info.id);
       console.log("💬 Conversation:", this.activeConversation);
       
@@ -629,34 +883,68 @@ export default {
         await this.checkAndMarkAsRead();
       }
       
+      // Optimistic UI - Add message immediately with sending status
+      const optimisticMessage = {
+        id: tempId,
+        text: messageText,
+        conversation_id: this.activeConversation.id,
+        created_at: new Date().toISOString(),
+        sender: this.auth_info,
+        sender_id: this.auth_info.id,
+        type: "mine",
+        sending: true, // Mark as sending
+        sent: false,
+      };
+      
+      this.messages.push(optimisticMessage);
+      this.newMessage = "";
+      this.sendingMessage = true;
+      
+      // Auto-scroll to show new message
+      this.$nextTick(() => {
+        this.scrollToBottom();
+      });
+      
       try {
         const payload = {
           conversation_id: this.activeConversation.id,
-          text: this.newMessage,
+          text: messageText,
         };
         
         console.log("📤 STEP 2: Sending API request with payload:", payload);
         const res = await axios.post("/messages/send", payload);
         console.log("✅ STEP 3: API response received:", res.data);
 
-        // Push immediately (optimistic UI)
-        const newMessageObj = {
-          ...res.data.data,
-          sender: this.auth_info,
-          type: "mine",
-        };
-        
-        console.log("📱 STEP 4: Adding message to UI (optimistic):", newMessageObj);
-        this.messages.push(newMessageObj);
-        this.newMessage = "";
-        this.scrollToBottom();
+        // Update the optimistic message with real data
+        const messageIndex = this.messages.findIndex(m => m.id === tempId);
+        if (messageIndex !== -1) {
+          this.messages[messageIndex] = {
+            ...res.data.data,
+            sender: this.auth_info,
+            type: "mine",
+            sending: false,
+            sent: true,
+          };
+        }
         
         console.log("🎯 STEP 5: Message sent successfully. Backend should now broadcast to receiver.");
         console.log("📡 Expected broadcast channel:", `private-chat.${this.getReceiverId()}`);
         
       } catch (err) {
         console.error("❌ STEP ERROR: Failed to send message", err);
-        console.error("Error details:", err.response?.data || err.message);
+        
+        // Remove failed message from UI
+        const messageIndex = this.messages.findIndex(m => m.id === tempId);
+        if (messageIndex !== -1) {
+          this.messages.splice(messageIndex, 1);
+        }
+        
+        // Restore message text
+        this.newMessage = messageText;
+        
+        window.s_alert("Failed to send message. Please try again.", "error");
+      } finally {
+        this.sendingMessage = false;
       }
     },
     
@@ -694,6 +982,119 @@ export default {
         minute: "2-digit",
       });
     },
+    
+    // Format relative time like "1 min ago"
+    formatRelativeTime(time) {
+      if (!time) return "";
+      
+      const messageDate = new Date(time);
+      const now = new Date();
+      const diffMs = now - messageDate;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins} min ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      
+      // For older messages, show date
+      return messageDate.toLocaleDateString();
+    },
+    
+    // Enhanced UI utility methods
+    formatMessageTime(time) {
+      if (!time) return "";
+      const messageDate = new Date(time);
+      const now = new Date();
+      const diffMs = now - messageDate;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      return messageDate.toLocaleDateString();
+    },
+    
+    isFirstMessageFromSender(message, index) {
+      if (index === 0) return true;
+      const prevMessage = this.messages[index - 1];
+      return prevMessage.sender_id !== message.sender_id;
+    },
+    
+    isLastMessageFromSender(message, index) {
+      if (index === this.messages.length - 1) return true;
+      const nextMessage = this.messages[index + 1];
+      return nextMessage.sender_id !== message.sender_id;
+    },
+    
+    // Typing functionality
+    handleInputKeydown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        this.sendMessage();
+        return;
+      }
+      
+      // Auto-resize textarea
+      this.$nextTick(() => {
+        const textarea = event.target;
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+      });
+    },
+    
+    handleTyping() {
+      if (!this.activeConversation) return;
+      
+      // Clear existing debounce
+      if (this.typingDebounce) {
+        clearTimeout(this.typingDebounce);
+      }
+      
+      // Start typing indicator
+      if (!this.userIsTyping) {
+        this.userIsTyping = true;
+        this.broadcastTyping(true);
+      }
+      
+      // Stop typing after 2 seconds of no input
+      this.typingDebounce = setTimeout(() => {
+        this.stopTyping();
+      }, 2000);
+    },
+    
+    stopTyping() {
+      if (this.userIsTyping) {
+        this.userIsTyping = false;
+        this.broadcastTyping(false);
+      }
+      
+      if (this.typingDebounce) {
+        clearTimeout(this.typingDebounce);
+        this.typingDebounce = null;
+      }
+    },
+    
+    broadcastTyping(isTyping) {
+      if (!this.activeConversation) return;
+      
+      // Send typing event to backend for broadcasting
+      axios.post('/messages/typing', {
+        conversation_id: this.activeConversation.id,
+        is_typing: isTyping
+      }).catch(error => {
+        console.error('Failed to broadcast typing status:', error);
+      });
+      
+      console.log(`User ${isTyping ? 'started' : 'stopped'} typing in conversation ${this.activeConversation?.id}`);
+    },
+    
     handleResize() {
       this.isMobile = window.innerWidth <= 767;
       if (this.isMobile && !this.activeConversation) {
@@ -1018,6 +1419,17 @@ export default {
       clearTimeout(this.clickThrottle);
       this.clickThrottle = null;
     }
+    
+    // Clear typing indicators
+    if (this.typingDebounce) {
+      clearTimeout(this.typingDebounce);
+      this.typingDebounce = null;
+    }
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+      this.typingTimeout = null;
+    }
+    this.stopTyping();
     
     // Cleanup Echo listeners
     this.cleanupEchoListeners();

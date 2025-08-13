@@ -14,6 +14,7 @@ use App\Modules\Management\Message\Actions\UpdateGroup;
 use App\Modules\Management\Message\Actions\DeleteGroup;
 use App\Modules\Management\Message\Actions\MarkMessagesAsRead;
 use App\Modules\Management\Message\Actions\SendMessage;
+use App\Modules\Management\Message\Actions\BroadcastTyping;
 use App\Http\Controllers\Controller as ControllersController;
 use Illuminate\Http\Request;
 
@@ -89,6 +90,12 @@ class Controller extends ControllersController
     public function DeleteGroup($id)
     {
         $data = DeleteGroup::execute($id);
+        return $data;
+    }
+    
+    public function BroadcastTyping(Request $request)
+    {
+        $data = BroadcastTyping::execute($request);
         return $data;
     }
 }

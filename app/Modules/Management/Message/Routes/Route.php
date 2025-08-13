@@ -17,5 +17,6 @@ Route::prefix('v1')->group(function () {
         Route::delete('conversations/{id}/group', [Controller::class, 'DeleteGroup']);
         Route::post('mark-as-read/{conversationId}', [Controller::class, 'MarkMessagesAsRead']);
         Route::post('send', [Controller::class, 'SendMessage']);
+        Route::post('typing', [Controller::class, 'BroadcastTyping']);
     });
 });

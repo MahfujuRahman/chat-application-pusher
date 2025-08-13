@@ -10,12 +10,23 @@ class GetConversationMessages
     {
         try {
             $userId = auth()->id();
+            
+            // Get pagination parameters from request
+            $page = (int) request('page', 1);
+            $perPage = (int) request('per_page', 20);
+            $offset = ($page - 1) * $perPage;
+            
             $data = self::$model::with('conversation', 'sender', 'receiver')
                 ->where('conversation_id', $id)
+                ->orderBy('created_at', 'desc') // Get newest first for pagination
+                ->offset($offset)
+                ->limit($perPage)
                 ->get()
+                ->reverse() // Reverse to show oldest first in the UI
+                ->values() // Reset array keys after reverse
                 ->map(function ($message) use ($userId) {
                     $messageArray = $message->toArray();
-                    $messageArray['type'] = $message->sender == $userId ? 'mine' : 'their';
+                    $messageArray['type'] = $message->sender == $userId ? 'mine' : 'theirs';
                     return $messageArray;
                 });
 

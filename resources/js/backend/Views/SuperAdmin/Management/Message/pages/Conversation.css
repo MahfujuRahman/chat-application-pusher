@@ -276,7 +276,7 @@
   color: #eee;
 }
 
-/* Chat bubbles */
+/* Chat bubbles - restored original design */
 .chat-bubble {
   max-width: 70%;
   margin-bottom: 14px;
@@ -287,6 +287,32 @@
   font-size: 1rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   color: #222;
+}
+
+.chat-bubble.mine {
+  align-self: flex-end;
+  background: #dcf8c6;
+  color: #222;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-container.dark-mode .chat-bubble.mine {
+  background-color: #2a5934;
+  color: #c9f7b7;
+}
+
+.chat-bubble.theirs {
+  align-self: flex-start;
+  background: #fff;
+  color: #222;
+  border-bottom-left-radius: 4px;
+  border: 1px solid #212529;
+}
+
+.chat-container.dark-mode .chat-bubble.theirs {
+  background-color: #2a2a2a;
+  color: #ddd;
+  border-color: #444;
 }
 
 /* Sender name for group chats */
@@ -300,6 +326,134 @@
 
 .chat-container.dark-mode .chat-sender-name {
   color: #aaa;
+}
+
+.chat-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.8em;
+  color: #888;
+}
+
+.chat-container.dark-mode .chat-meta {
+  color: #999;
+}
+
+/* Message Meta Info */
+.message-meta {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 2px;
+  text-align: right;
+}
+
+.chat-container.dark-mode .message-meta {
+  color: #999;
+}
+
+/* Sender name for group messages */
+.message-sender {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.chat-container.dark-mode .message-sender {
+  color: #aaa;
+}
+
+/* Loading States */
+.loading-messages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  color: #666;
+}
+
+.chat-container.dark-mode .loading-messages {
+  color: #aaa;
+}
+
+.load-more-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  margin: 10px auto;
+  display: block;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.load-more-btn:hover {
+  background: #0056b3;
+}
+
+.load-more-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.chat-container.dark-mode .load-more-btn {
+  background: #0d6efd;
+}
+
+.chat-container.dark-mode .load-more-btn:hover {
+  background: #0b5ed7;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f0f0f0;
+  border-radius: 18px;
+  margin: 4px 0;
+  max-width: 70%;
+  font-size: 0.85rem;
+  color: #666;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-container.dark-mode .typing-indicator {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 3px;
+  margin-right: 8px;
+}
+
+.typing-dots span {
+  width: 4px;
+  height: 4px;
+  background: #666;
+  border-radius: 50%;
+  animation: typing-bounce 1.4s infinite ease-in-out both;
+}
+
+.chat-container.dark-mode .typing-dots span {
+  background: #aaa;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  } 40% {
+    transform: scale(1);
+  }
 }
 
 /* Group indicator in conversation list */
@@ -347,6 +501,7 @@
   gap: 4px;
 }
 
+/* Remove or simplify complex bubble styles */
 .mine {
   align-self: flex-end;
   background: #dcf8c6;
@@ -387,78 +542,94 @@
 }
 
 /* Input Area & File Upload */
-.chat-input-area {
+.chat-input-container {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
-  padding: 10px 20px;
+  padding: 15px 20px;
   background: #fff;
   border-top: 1px solid #212529;
   border-radius: 0 0 12px 0;
-  color: #222;
 }
 
-.chat-container.dark-mode .chat-input-area {
+.chat-container.dark-mode .chat-input-container {
   background-color: #1a1a1a;
   border-top-color: #333;
-  color: #eee;
 }
 
-.input-with-file {
+.chat-input-wrapper {
   display: flex;
-  align-items: center;
-  flex-grow: 1;
+  align-items: flex-end;
   gap: 10px;
-  position: relative;
-}
-
-.file-attach-btn {
-  flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  background-color: #3b82f6;
-  color: white;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 22px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.5);
-  transition: background-color 0.3s ease;
-}
-
-.chat-container.dark-mode .file-attach-btn {
-  background-color: #2563eb;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.8);
-}
-
-.file-attach-btn:hover {
-  background-color: #2563eb;
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.7);
+  flex: 1;
 }
 
 .chat-input {
-  flex-grow: 1;
-  min-height: 38px;
+  flex: 1;
+  min-height: 40px;
+  max-height: 100px;
   resize: none;
-  padding: 8px 12px;
+  padding: 10px 15px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
   font-family: inherit;
-  box-sizing: border-box;
-  min-height: 80px; /* ensure textarea bigger */
-  color: #222;
   background-color: #fff;
+  color: #222;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.chat-input:focus {
+  border-color: #007bff;
 }
 
 .chat-container.dark-mode .chat-input {
-  background-color: #121212;
+  background-color: #2a2a2a;
   border-color: #444;
   color: #eee;
 }
 
+.chat-container.dark-mode .chat-input:focus {
+  border-color: #0d6efd;
+}
+
+.send-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 16px;
+}
+
+.send-button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.send-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.send-button.sending {
+  background: #6c757d;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Remove unused file upload styles */
 /* File name tag inside textarea container */
 .textarea-wrapper {
   width: 100%;
@@ -636,12 +807,17 @@
     padding: 10px;
   }
 
-  .chat-input-area {
+  .chat-input-container {
     padding: 10px;
   }
 
-  .chat-bubble {
+  .message-item {
     max-width: 90%;
+  }
+
+  .load-more-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
   }
 }
 
