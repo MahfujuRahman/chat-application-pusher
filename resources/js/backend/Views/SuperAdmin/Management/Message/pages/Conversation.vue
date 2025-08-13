@@ -300,9 +300,11 @@
             <span>{{ formatRelativeTime(message.created_at) }}</span>
           </div>
         </div>
-        
-        <!-- Typing Indicator -->
-        <div v-if="isTyping && typingUser" class="chat-bubble theirs typing-indicator">
+      </div>
+
+      <!-- Typing Indicator - positioned between messages and input -->
+      <div v-if="isTyping && typingUser" class="typing-indicator-container">
+        <div class="chat-bubble theirs typing-indicator">
           <div class="typing-dots">
             <span></span>
             <span></span>
@@ -671,17 +673,13 @@ export default {
         this.isTyping = true;
         this.typingUser = e.user;
         
-        // Clear any existing typing timeout
+        // Clear any existing typing timeout (but don't set new one - keep indicator visible)
         if (this.typingTimeout) {
           clearTimeout(this.typingTimeout);
+          this.typingTimeout = null;
         }
         
-        // Auto-hide typing indicator after 3 seconds
-        this.typingTimeout = setTimeout(() => {
-          this.isTyping = false;
-          this.typingUser = null;
-          this.typingTimeout = null;
-        }, 3000);
+        // Removed auto-hide timeout - typing indicator stays until user stops typing
         
       } else {
         // User stopped typing

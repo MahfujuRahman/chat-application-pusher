@@ -407,6 +407,18 @@
   background: #0b5ed7;
 }
 
+/* Typing Indicator Container - positioned between messages and input */
+.typing-indicator-container {
+  padding: 8px 16px 0px 16px;
+  background: #212529;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-container.dark-mode .typing-indicator-container {
+  background: #121212;
+  border-top-color: rgba(255, 255, 255, 0.05);
+}
+
 /* Typing Indicator */
 .typing-indicator {
   display: flex;
@@ -434,8 +446,8 @@
 }
 
 .typing-dots span {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   background: #666;
   border-radius: 50%;
   animation: typing-bounce 1.4s infinite ease-in-out both;
@@ -448,11 +460,19 @@
 .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
 .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
 
+/* Enhanced typing indicator text */
+.typing-text {
+  font-style: italic;
+  font-weight: 500;
+}
+
 @keyframes typing-bounce {
   0%, 80%, 100% {
-    transform: scale(0);
+    transform: scale(0.8);
+    opacity: 0.5;
   } 40% {
-    transform: scale(1);
+    transform: scale(1.2);
+    opacity: 1;
   }
 }
 
