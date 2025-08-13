@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusher Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .log { background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 5px; font-family: monospace; max-height: 400px; overflow-y: auto; }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196F3; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        input { padding: 8px; margin: 5px; border: 1px solid #444; background: #333; color: white; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Pusher Broadcasting Debug Tool</h1>
+        
+        <div>
+            <h3>Connection Status</h3>
+            <div id="connectionStatus">Connecting...</div>
+        </div>
+
+        <div>
+            <h3>Test Authentication</h3>
+            <input type="number" id="userId" placeholder="User ID to test" value="6">
+            <button onclick="testAuth()">Test Channel Auth</button>
+        </div>
+
+        <div>
+            <h3>Listen for Messages</h3>
+            <input type="number" id="listenUserId" placeholder="Listen for User ID" value="6">
+            <button onclick="startListening()">Start Listening</button>
+            <button onclick="stopListening()">Stop Listening</button>
+        </div>
+
+        <div>
+            <h3>Debug Log</h3>
+            <div id="debugLog" class="log"></div>
+        </div>
+    </div>
+
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script>
+        let pusher;
+        let channel;
+        let debugLog = document.getElementById('debugLog');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            debugLog.appendChild(logEntry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+        // Get token from localStorage
+        const token = localStorage.getItem('admin_token');
+        
+        log(`🔑 Token: ${token ? 'Present (' + token.substring(0, 20) + '...)' : 'Missing'}`, token ? 'success' : 'error');
+
+        // Initialize Pusher
+        pusher = new Pusher('f2a8ac08c5d831952276', {
+            cluster: 'ap2',
+            forceTLS: true,
+            authEndpoint: '/broadcasting/auth',
+            auth: {
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            }
+        });
+
+        // Connection event handlers
+        pusher.connection.bind('connected', function() {
+            log('✅ Connected to Pusher', 'success');
+            document.getElementById('connectionStatus').innerHTML = '<span class="success">✅ Connected</span>';
+        });
+
+        pusher.connection.bind('disconnected', function() {
+            log('⚠️ Disconnected from Pusher', 'warning');
+            document.getElementById('connectionStatus').innerHTML = '<span class="warning">⚠️ Disconnected</span>';
+        });
+
+        pusher.connection.bind('error', function(err) {
+            log('🚨 Connection error: ' + JSON.stringify(err), 'error');
+            document.getElementById('connectionStatus').innerHTML = '<span class="error">❌ Error</span>';
+        });
+
+        function testAuth() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                log('❌ Please enter a User ID', 'error');
+                return;
+            }
+
+            log(`🔍 Testing authentication for channel: private-chat.${userId}`, 'info');
+
+            const testChannel = pusher.subscribe(`private-chat.${userId}`);
+            
+            testChannel.bind('pusher:subscription_succeeded', function() {
+                log(`✅ Successfully authenticated for channel: private-chat.${userId}`, 'success');
+                pusher.unsubscribe(`private-chat.${userId}`);
+            });
+
+            testChannel.bind('pusher:subscription_error', function(error) {
+                log(`❌ Authentication failed for channel: private-chat.${userId} - ${JSON.stringify(error)}`, 'error');
+            });
+        }
+
+        function startListening() {
+            const userId = document.getElementById('listenUserId').value;
+            if (!userId) {
+                log('❌ Please enter a User ID to listen for', 'error');
+                return;
+            }
+
+            if (channel) {
+                pusher.unsubscribe(`private-chat.${userId}`);
+            }
+
+            log(`👂 Starting to listen on channel: private-chat.${userId}`, 'info');
+            
+            channel = pusher.subscribe(`private-chat.${userId}`);
+
+            channel.bind('pusher:subscription_succeeded', function() {
+                log(`✅ Successfully subscribed to: private-chat.${userId}`, 'success');
+            });
+
+            channel.bind('pusher:subscription_error', function(error) {
+                log(`❌ Subscription error: ${JSON.stringify(error)}`, 'error');
+            });
+
+            // Listen for MessageSent event
+            channel.bind('MessageSent', function(data) {
+                log(`📨 Received MessageSent event: ${JSON.stringify(data, null, 2)}`, 'success');
+            });
+
+            // Listen for all events
+            channel.bind_global(function(event, data) {
+                if (event !== 'pusher:subscription_succeeded') {
+                    log(`📡 Received event: ${event} - Data: ${JSON.stringify(data)}`, 'info');
+                }
+            });
+        }
+
+        function stopListening() {
+            const userId = document.getElementById('listenUserId').value;
+            if (channel && userId) {
+                pusher.unsubscribe(`private-chat.${userId}`);
+                log(`🛑 Stopped listening on: private-chat.${userId}`, 'warning');
+                channel = null;
+            }
+        }
+
+        // Initial connection
+        log('🔄 Initializing Pusher connection...', 'info');
+        
+    </script>
+</body>
+</html>

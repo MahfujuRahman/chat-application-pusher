@@ -145,7 +145,7 @@ export default {
 <style scoped>
 .chat-dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
   padding: 20px;
 }
 
@@ -155,7 +155,7 @@ export default {
 }
 
 .welcome-card {
-  background: rgba(255, 255, 255, 0.95);
+  /* background: rgba(255, 255, 255, 0.95); */
   border-radius: 20px;
   padding: 40px;
   display: flex;
@@ -168,7 +168,7 @@ export default {
 .welcome-content h1.welcome-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #2d3436;
+  color: #fff;
   margin-bottom: 10px;
   display: flex;
   align-items: center;
@@ -182,7 +182,7 @@ export default {
 
 .welcome-subtitle {
   font-size: 1.2rem;
-  color: #636e72;
+  color: #fff;
   margin: 0;
 }
 

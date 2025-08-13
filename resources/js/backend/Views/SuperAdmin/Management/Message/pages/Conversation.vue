@@ -256,9 +256,15 @@
           </div>
           {{ activeConversation?.participant?.name || "..." }}
         </div>
-        <button class="btn btn-dark btn-sm" @click="loadMessages(activeConversation)">
-          <i class="fa fa-refresh"></i>
-        </button>
+        <div class="d-flex gap-2">
+          <!-- Debug button -->
+          <button class="btn btn-warning btn-sm" @click="debugEchoConnection" title="Debug Echo">
+            🔧 Debug
+          </button>
+          <button class="btn btn-dark btn-sm" @click="loadMessages(activeConversation)">
+            <i class="fa fa-refresh"></i>
+          </button>
+        </div>
       </div>
 
       <div class="chat-messages" ref="chatMessages" @scroll="onChatScroll" @click="onChatClick">
@@ -280,6 +286,7 @@
         <button type="submit" class="btn btn-primary chat-send-btn" :disabled="!newMessage || !activeConversation">Send</button>
       </form>
     </div>
+
   </div>
 </template>
 
@@ -315,6 +322,8 @@ export default {
 
       isMobile: window.innerWidth <= 767,
       mobileView: "list", // 'list' | 'chat'
+      
+      echoChannels: [], // Track active Echo channels for cleanup
     };
   },
   computed: {
@@ -323,42 +332,264 @@ export default {
     }),
   },
   mounted() {
+    console.log("🚀 LIFECYCLE: Conversation component mounted");
+    console.log("User info:", this.auth_info);
+    console.log("Window Echo available:", !!window.Echo);
+    console.log("Window Pusher available:", !!window.Pusher);
+    
     window.addEventListener("resize", this.handleResize);
     document.addEventListener("click", this.handleClickOutside);
     this.handleResize(); // initial setup
 
     this.loadConversations();
-
-    const userId = this.auth_info?.id;
-    if (userId) {
-      window.Echo.private(`chat.${userId}`)
-        .listen("MessageSent", (e) => {
-          // Avoid duplicates
-          const exists = this.messages.some((m) => m.id === e.message.id);
-          if (!exists) {
-            // Add only if it belongs to current conversation
-            if (this.activeConversation?.id === e.message.conversation_id) {
-              this.messages.push({
-                ...e.message,
-                sender: e.sender,
-                type: e.message.sender_id === this.auth_info.id ? "mine" : "theirs",
-              });
-              this.scrollToBottom();
-            } else {
-              // If message is from another conversation, refresh conversation list
-              this.loadConversations();
-            }
-          }
-        })
-        .error((error) => {
-          console.error("❌ Pusher subscription error:", error);
-        })
-        .subscribed(() => {
-          console.log("✅ Subscribed to chat." + userId);
-        });
-    }
+    
+    // Small delay to ensure Echo is fully initialized
+    console.log("⏰ Setting up Echo listeners with delay...");
+    this.$nextTick(() => {
+      setTimeout(() => {
+        console.log("⚡ Executing delayed setupEchoListeners");
+        this.setupEchoListeners();
+      }, 100);
+    });
+  },
+  beforeUnmount() {
+    this.cleanupEchoListeners();
   },
   methods: {
+    setupEchoListeners() {
+      console.log("🔧 STEP A: setupEchoListeners called");
+      
+      const userId = this.auth_info?.id;
+      if (!userId) {
+        console.error("❌ STEP A ERROR: No user ID found for Echo setup");
+        return;
+      }
+
+      if (!window.Echo) {
+        console.error("❌ STEP A ERROR: Echo is not initialized");
+        console.log("Available globals:", { Echo: window.Echo, Pusher: window.Pusher });
+        return;
+      }
+
+      console.log("✅ STEP B: Echo validation passed");
+      console.log("� Setting up listener for user ID:", userId);
+      console.log("🔑 Token exists:", !!localStorage.getItem("admin_token"));
+      console.log("🔧 Echo object:", window.Echo);
+      
+      try {
+        // CRITICAL FIX: Force immediate callback registration
+        console.log("🔄 STEP C: Creating Echo private channel subscription");
+        const channelName = `chat.${userId}`;
+        console.log("📡 Channel name:", channelName);
+        console.log("📡 Full Pusher channel name will be:", `private-${channelName}`);
+        
+        // Step 1: Create the channel
+        const channel = window.Echo.private(channelName);
+        
+        // CRITICAL: Force immediate listener registration before any other operations
+        console.log("🎯 STEP C1: IMMEDIATELY adding MessageSent listener...");
+        
+        // Use the underlying Pusher channel directly to ensure callback registration
+        const pusherChannelName = `private-${channelName}`;
+        
+        // Wait for channel to be available, then bind directly
+        const bindListener = () => {
+          const pusherChannel = window.Echo.connector.pusher.channels.channels[pusherChannelName];
+          if (pusherChannel) {
+            console.log("📡 DIRECT PUSHER: Binding MessageSent to channel");
+            pusherChannel.bind('MessageSent', (e) => {
+              console.log("🎉 DIRECT PUSHER: RECEIVED MessageSent event!", e);
+              console.log("📨 Raw event data:", e);
+              console.log("📨 Event timestamp:", new Date().toISOString());
+              console.log("📨 Calling handleIncomingMessage...");
+              this.handleIncomingMessage(e);
+            });
+            
+            console.log("✅ Direct Pusher binding completed");
+            
+            // Verify the binding worked
+            setTimeout(() => {
+              console.log("🔍 Verifying direct binding:", {
+                channelCallbacks: pusherChannel.callbacks,
+                hasMessageSent: !!pusherChannel.callbacks.MessageSent
+              });
+            }, 100);
+          } else {
+            console.log("⏳ Pusher channel not ready, retrying in 100ms...");
+            setTimeout(bindListener, 100);
+          }
+        };
+        
+        // Try Echo's listen method as well (backup)
+        console.log("🔄 STEP C2: Also adding Echo listen method (backup)...");
+        channel.listen("MessageSent", (e) => {
+          console.log("🎉 ECHO METHOD: RECEIVED MessageSent event!");
+          console.log("📨 Raw event data:", e);
+          this.handleIncomingMessage(e);
+        });
+        
+        // Start the direct binding process
+        bindListener();
+        
+        // Step 3: Add error handler
+        console.log("🚨 STEP C3: Adding error handler...");
+        channel.error((error) => {
+          console.error("❌ STEP C ERROR: Pusher subscription error:", error);
+          console.error("Error type:", error.type);
+          console.error("Error info:", error.error);
+          if (error.type === 'AuthError') {
+            console.error("🚫 Authentication failed - Token might be invalid");
+            console.error("Current token:", localStorage.getItem("admin_token")?.substring(0, 20) + "...");
+            alert("Authentication failed. Please refresh and try again.");
+          }
+        });
+        
+        // Step 4: Add subscribed handler
+        console.log("✅ STEP C4: Adding subscription success handler...");
+        channel.subscribed(() => {
+          console.log("✅ STEP D: Successfully subscribed to", channelName);
+          console.log("🎯 Now listening for MessageSent events on this channel");
+          
+          // Force another direct bind after subscription
+          setTimeout(() => {
+            const pusherChannel = window.Echo.connector.pusher.channels.channels[pusherChannelName];
+            if (pusherChannel && !pusherChannel.callbacks.MessageSent) {
+              console.log("🔄 BACKUP: Force-binding MessageSent after subscription");
+              pusherChannel.bind('MessageSent', (e) => {
+                console.log("🎉 BACKUP BIND: RECEIVED MessageSent event!", e);
+                this.handleIncomingMessage(e);
+              });
+            }
+            
+            // Final verification
+            const channelInfo = window.Echo.connector.channels[pusherChannelName];
+            console.log("📊 Final callback check:", {
+              echoChannelCallbacks: channelInfo?.callbacks,
+              pusherChannelCallbacks: pusherChannel?.callbacks,
+              hasMessageSent: !!(pusherChannel?.callbacks?.MessageSent || channelInfo?.callbacks?.MessageSent)
+            });
+          }, 500);
+        });
+          
+        this.echoChannels.push({ channel, name: channelName });
+        console.log("✅ STEP E: Echo listener setup completed");
+        console.log("📊 Total active channels:", this.echoChannels.length);
+        
+        // Test if the channel is actually listening
+        setTimeout(() => {
+          console.log("🔍 STEP F: Channel state verification (after 1 second)");
+          const pusherChannelName = `private-${channelName}`;
+          const hasChannel = !!window.Echo.connector.channels[pusherChannelName];
+          const channelInfo = window.Echo.connector.channels[pusherChannelName];
+          
+          console.log("Channel details:", {
+            expectedPusherChannelName: pusherChannelName,
+            channelExists: hasChannel,
+            allChannels: Object.keys(window.Echo.connector.channels),
+            callbacks: channelInfo?.callbacks || 'No callbacks found',
+            callbackCount: channelInfo?.callbacks ? Object.keys(channelInfo.callbacks).length : 0
+          });
+          
+          if (hasChannel && channelInfo?.callbacks?.MessageSent) {
+            console.log("✅ MessageSent callback is properly registered");
+          } else {
+            console.log("❌ MessageSent callback is NOT registered!");
+            console.log("Available callbacks:", channelInfo?.callbacks ? Object.keys(channelInfo.callbacks) : 'None');
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error("❌ STEP C ERROR: Exception setting up Echo listeners:", error);
+        console.error("Stack trace:", error.stack);
+      }
+    },
+    
+    cleanupEchoListeners() {
+      console.log("🧹 Cleaning up Echo listeners");
+      this.echoChannels.forEach(({ channel, name }) => {
+        try {
+          window.Echo.leave(name);
+          console.log(`✅ Left channel: ${name}`);
+        } catch (error) {
+          console.error(`❌ Error leaving channel ${name}:`, error);
+        }
+      });
+      this.echoChannels = [];
+    },
+    
+    handleIncomingMessage(e) {
+      console.log("🎯 STEP R2: handleIncomingMessage called");
+      console.log("📨 Raw event object:", e);
+      console.log("📨 Event keys:", Object.keys(e));
+      console.log("📨 Event structure analysis:", {
+        hasId: !!e.id,
+        hasMessageProp: !!e.message,
+        hasSender: !!e.sender,
+        hasConversationId: !!e.conversation_id,
+        hasText: !!e.text
+      });
+      
+      // Handle both old and new data structures
+      const messageData = e.message || e; // Support both structures
+      const senderData = e.sender || messageData.sender;
+      
+      console.log("🔄 STEP R3: Processed data");
+      console.log("📝 Message data:", messageData);
+      console.log("👤 Sender data:", senderData);
+      console.log("🆔 Message ID:", messageData.id);
+      console.log("💬 Conversation ID:", messageData.conversation_id);
+      console.log("📝 Text:", messageData.text);
+      
+      // Check if this is for current active conversation
+      const isCurrentConversation = this.activeConversation?.id === messageData.conversation_id;
+      console.log("🎯 STEP R4: Conversation check");
+      console.log("Active conversation ID:", this.activeConversation?.id);
+      console.log("Message conversation ID:", messageData.conversation_id);
+      console.log("Is current conversation:", isCurrentConversation);
+      
+      // Avoid duplicates
+      const exists = this.messages.some((m) => m.id === messageData.id);
+      console.log("🔍 STEP R5: Duplicate check");
+      console.log("Message exists in current list:", exists);
+      console.log("Current messages count:", this.messages.length);
+      console.log("Current message IDs:", this.messages.map(m => m.id));
+      
+      if (!exists && messageData.id) {
+        console.log("✅ STEP R6: Adding new message");
+        
+        if (isCurrentConversation) {
+          const newMessage = {
+            id: messageData.id,
+            text: messageData.text,
+            conversation_id: messageData.conversation_id,
+            created_at: messageData.date_time,
+            sender: senderData,
+            sender_id: senderData?.id,
+            type: senderData?.id === this.auth_info.id ? "mine" : "theirs",
+          };
+          
+          console.log("📱 STEP R7: Adding to current conversation UI");
+          console.log("New message object:", newMessage);
+          
+          this.messages.push(newMessage);
+          this.scrollToBottom();
+          console.log("✅ STEP R8: Message added successfully!");
+          console.log("New messages count:", this.messages.length);
+        } else {
+          console.log("🔄 STEP R7: Message from different conversation, refreshing list");
+          this.loadConversations();
+        }
+      } else {
+        console.log("⚠️ STEP R6: Message skipped", { 
+          reason: exists ? "Already exists" : "No ID",
+          exists, 
+          hasId: !!messageData.id,
+          messageId: messageData.id
+        });
+      }
+      
+      console.log("🏁 STEP R9: handleIncomingMessage completed");
+    },
     async loadConversations() {
       try {
         const res = await axios.get("/messages/get-all-conversations");
@@ -462,6 +693,11 @@ export default {
     async sendMessage() {
       if (!this.newMessage) return;
       
+      console.log("🚀 STEP 1: Starting sendMessage process");
+      console.log("📝 Message content:", this.newMessage);
+      console.log("👤 Sender ID:", this.auth_info.id);
+      console.log("💬 Conversation:", this.activeConversation);
+      
       // Mark messages as read when user sends a message (indicates they're actively in the chat)
       if (this.pendingMarkAsRead) {
         await this.checkAndMarkAsRead();
@@ -472,19 +708,47 @@ export default {
           conversation_id: this.activeConversation.id,
           text: this.newMessage,
         };
+        
+        console.log("📤 STEP 2: Sending API request with payload:", payload);
         const res = await axios.post("/messages/send", payload);
+        console.log("✅ STEP 3: API response received:", res.data);
 
         // Push immediately (optimistic UI)
-        this.messages.push({
+        const newMessageObj = {
           ...res.data.data,
           sender: this.auth_info,
           type: "mine",
-        });
+        };
+        
+        console.log("📱 STEP 4: Adding message to UI (optimistic):", newMessageObj);
+        this.messages.push(newMessageObj);
         this.newMessage = "";
         this.scrollToBottom();
+        
+        console.log("🎯 STEP 5: Message sent successfully. Backend should now broadcast to receiver.");
+        console.log("📡 Expected broadcast channel:", `private-chat.${this.getReceiverId()}`);
+        
       } catch (err) {
-        console.error("Failed to send message", err);
+        console.error("❌ STEP ERROR: Failed to send message", err);
+        console.error("Error details:", err.response?.data || err.message);
       }
+    },
+    
+    getReceiverId() {
+      if (!this.activeConversation) return null;
+      
+      // For group chats, there might be multiple receivers
+      if (this.activeConversation.participant?.is_group) {
+        return "group-" + this.activeConversation.id;
+      }
+      
+      // For individual chats, find the other participant
+      const participants = [
+        this.activeConversation.creator,
+        this.activeConversation.participant_id || this.activeConversation.participant?.id
+      ].filter(id => id && id !== this.auth_info.id);
+      
+      return participants[0] || null;
     },
     scrollToBottom() {
       this.$nextTick(() => {
@@ -628,6 +892,7 @@ export default {
     },
 
     async removeMemberFromGroup(userId) {
+
       if (!confirm("Are you sure you want to remove this member?")) return;
 
       try {
@@ -647,6 +912,7 @@ export default {
       } catch (err) {
         console.error("Failed to remove member from group", err);
       }
+      
     },
 
     editGroup() {
@@ -724,6 +990,84 @@ export default {
         console.error("Failed to delete group", err);
         window.s_alert("Failed to delete group", "error");
       }
+    },
+    
+    debugEchoConnection() {
+      console.log("🔍 ===== COMPLETE ECHO DEBUG REPORT =====");
+      
+      // Basic setup check
+      console.log("1️⃣ BASIC SETUP:");
+      console.log("Echo object:", window.Echo);
+      console.log("Pusher object:", window.Pusher);
+      console.log("Auth token exists:", !!localStorage.getItem('admin_token'));
+      console.log("Token preview:", localStorage.getItem('admin_token')?.substring(0, 30) + "...");
+      console.log("Current user ID:", this.auth_info?.id);
+      console.log("Current user:", this.auth_info);
+      
+      // Connection status
+      console.log("\n2️⃣ CONNECTION STATUS:");
+      if (window.Echo && window.Echo.connector) {
+        const pusher = window.Echo.connector.pusher;
+        console.log("Pusher connection state:", pusher.connection.state);
+        console.log("Pusher socket ID:", pusher.connection.socket_id);
+        console.log("Pusher channels:", pusher.channels.channels);
+        console.log("Echo channels:", window.Echo.connector.channels);
+      } else {
+        console.log("❌ Echo connector not available");
+      }
+      
+      // Channel analysis  
+      console.log("\n3️⃣ CHANNEL ANALYSIS:");
+      console.log("Vue component channels:", this.echoChannels);
+      
+      const userId = this.auth_info?.id;
+      if (userId) {
+        const expectedChannel = `private-chat.${userId}`;
+        const hasChannel = window.Echo?.connector?.channels[expectedChannel];
+        console.log(`Expected channel: ${expectedChannel}`);
+        console.log("Channel exists:", !!hasChannel);
+        
+        if (hasChannel) {
+          console.log("Channel details:", hasChannel);
+          console.log("Channel callbacks:", hasChannel.callbacks);
+          console.log("MessageSent callback exists:", !!hasChannel.callbacks?.MessageSent);
+        }
+      }
+      
+      // Active conversation info
+      console.log("\n4️⃣ CONVERSATION INFO:");
+      console.log("Active conversation:", this.activeConversation);
+      console.log("Messages count:", this.messages.length);
+      console.log("Expected receiver ID:", this.getReceiverId());
+      
+      // Manual subscription test
+      console.log("\n5️⃣ MANUAL SUBSCRIPTION TEST:");
+      if (userId && window.Echo) {
+        console.log(`Creating test subscription to chat.${userId}`);
+        try {
+          const testChannel = window.Echo.private(`chat.${userId}`)
+            .listen('test-event', (data) => {
+              console.log('✅ Test event received:', data);
+            })
+            .listen('MessageSent', (data) => {
+              console.log('✅ Manual MessageSent listener triggered:', data);
+            });
+          console.log('✅ Test subscription created successfully');
+          
+          // Check if callbacks are registered
+          setTimeout(() => {
+            const channelName = `private-chat.${userId}`;
+            const channel = window.Echo.connector.channels[channelName];
+            console.log(`Test subscription callbacks for ${channelName}:`, channel?.callbacks);
+          }, 500);
+          
+        } catch (error) {
+          console.error('❌ Test subscription failed:', error);
+        }
+      }
+      
+      console.log("🔍 ===== DEBUG REPORT COMPLETE =====");
+      alert('Complete debug information logged to console. Check browser console for details.');
     },
   },
   beforeUnmount() {
