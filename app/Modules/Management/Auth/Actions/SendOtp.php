@@ -6,6 +6,7 @@ namespace App\Modules\Management\Auth\Actions;
 use App\Modules\Mail\OTPSendMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class SendOtp
 {
@@ -38,7 +39,30 @@ class SendOtp
             ]);
 
 
-            Mail::to($requestData['email'])->send(new OTPSendMail($otp));
+            // send or queue the OTP mail with robust error handling
+            try {
+                $mailable = new OTPSendMail($otp);
+                // if queue driver is configured and not sync, queue instead of immediate send
+                if (config('queue.default') && config('queue.default') !== 'sync') {
+                    Mail::to($requestData['email'])->queue($mailable);
+                } else {
+                    Mail::to($requestData['email'])->send($mailable);
+                }
+            } catch (\Exception $e) {
+                // Log full exception and detect known quota errors (Gmail 550-5.4.5)
+                Log::error('Failed to send OTP mail', [
+                    'email' => $requestData['email'],
+                    'otp' => $otp,
+                    'exception' => $e->getMessage(),
+                ]);
+
+                $msg = $e->getMessage();
+                if (stripos($msg, '550-5.4.5') !== false || stripos($msg, 'Daily user sending limit exceeded') !== false) {
+                    return messageResponse('Email provider quota exceeded, please try again later', [], 503, 'server_error');
+                }
+
+                return messageResponse('Failed to send OTP email', [], 500, 'server_error');
+            }
 
             return messageResponse('OTP successfully send', [
                 'email' => $requestData['email'],
