@@ -714,13 +714,11 @@ export default {
     async loadConversations() {
       try {
         const res = await axios.get("/messages/get-all-conversations");
-        // Sort conversations to put group chats at the top
+        // Sort conversations by most recent activity (last_updated or updated_at)
         this.conversations = res.data.data.sort((a, b) => {
-          // Group chats first, then individual chats
-          if (a.participant?.is_group && !b.participant?.is_group) return -1;
-          if (!a.participant?.is_group && b.participant?.is_group) return 1;
-          // Within the same type, sort by last_updated (most recent first)
-          return new Date(b.last_updated) - new Date(a.last_updated);
+          const aTime = new Date(a.last_updated || a.updated_at).getTime();
+          const bTime = new Date(b.last_updated || b.updated_at).getTime();
+          return bTime - aTime;
         });
       } catch (err) {
         console.error("Failed to load conversations", err);

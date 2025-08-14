@@ -10,7 +10,7 @@ class GetAllConversations
     {
         try {
             $userId = auth()->id();
-            
+
             $data = self::$model::with(['creatorUser', 'participantUser'])
                 ->where(function ($q) use ($userId) {
                     $q->where('creator', $userId)
@@ -22,33 +22,51 @@ class GetAllConversations
                     // Count unread messages for this user in this conversation
                     $unreadCount = \App\Modules\Management\Message\Models\Model::where('conversation_id', $conversation->id)
                         ->where('sender', '!=', $userId) // Don't count own messages
-                        ->whereDoesntHave('readStatus', function($q) use ($userId) {
+                        ->whereDoesntHave('readStatus', function ($q) use ($userId) {
                             $q->where('user_id', $userId);
                         })
                         ->count();
-                    
+
+                    // Determine participant info
                     if ($conversation->is_group) {
-                        // For group chats, set the participant as group info
-                        $conversation->participant = (object) [
+                        $participant = (object)[
                             'name' => $conversation->group_name,
-                            'image' => null, // You can add group avatar logic here
+                            'image' => null,
                             'is_group' => true,
-                            'participants_count' => count($conversation->group_participants ?? [])
+                            'participants_count' => count($conversation->group_participants ?? []),
                         ];
                     } else {
-                        // For regular conversations, determine who the "other user" is
-                        $conversation->participant = $userId == $conversation->creator
+                        $participant = $userId == $conversation->creator
                             ? $conversation->participantUser
                             : $conversation->creatorUser;
                     }
 
-                    // Add unread count to conversation
-                    $conversation->unread_count = $unreadCount;
+                    // Get the last message for this conversation
+                    $lastMessage = \App\Modules\Management\Message\Models\Model::where('conversation_id', $conversation->id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
 
-                    unset($conversation->creatorUser);
-                    unset($conversation->participantUser);
+                    $lastMessageText = null;
+                    $lastUpdated = $conversation->updated_at;
+                    if ($lastMessage) {
+                        $lastMessageText = $lastMessage->text ?? null;
+                        $lastUpdated = $lastMessage->created_at ?? $lastUpdated;
+                    }
 
-                    return $conversation;
+                    // Build a plain object to return (avoid mutating the Eloquent model)
+                    $conversationData = (object) [
+                        'id' => $conversation->id,
+                        'creator' => $conversation->creator,
+                        'is_group' => $conversation->is_group,
+                        'group_name' => $conversation->group_name ?? null,
+                        'participant' => $participant,
+                        'unread_count' => $unreadCount,
+                        'last_message' => $lastMessageText,
+                        'last_updated' => $lastUpdated,
+                        'updated_at' => $conversation->updated_at,
+                    ];
+
+                    return $conversationData;
                 });
 
             // ✅ Return the final data as response
