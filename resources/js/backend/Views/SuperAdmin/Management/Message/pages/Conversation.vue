@@ -175,11 +175,13 @@
     <aside v-if="!isMobile || mobileView === 'list'" class="chat-sidebar dark-mode">
       <div class="sidebar-header d-flex justify-content-between align-items-center">
         <span>Conversations</span>
-        <button title="New Group Chat" class="btn btn-dark btn-sm" @click="openGroupChatModal"><i
-            class="fa fa-users text-success"></i></button>
-        <button class="btn btn-dark btn-sm" @click="openModal">
-          <i class="fa fa-plus text-success"></i>
-        </button>
+        <div>
+          <button title="New Group Chat" class="btn btn-dark btn-sm" @click="openGroupChatModal"><i
+              class="fa fa-users text-success"></i></button>
+          <button class="btn btn-dark btn-sm ml-2" @click="openModal">
+            <i class="fa fa-plus text-success"></i>
+          </button>
+        </div>
       </div>
       <ul class="conversation-list">
         <li v-for="conversation in conversations" :key="conversation.id" @click="loadMessages(conversation)"
@@ -204,8 +206,8 @@
             </div>
           </div>
           <div class="conversation-meta">
-            <span class="conversation-time">{{ formatRelativeTime(conversation.last_updated || conversation.updated_at)
-            }}</span>
+            <span class="conversation-time">{{ timeTick && formatRelativeTime(conversation.last_updated ||
+              conversation.updated_at) }}</span>
             <span v-if="conversation.unread_count > 0" class="unread-badge">{{ conversation.unread_count }}</span>
             <button v-if="conversation.participant?.is_group"
               class="btn btn-sm btn-outline-light group-members-btn text-white border-white"
@@ -274,7 +276,7 @@
 
           <!-- Message time -->
           <div class="chat-meta">
-            <span>{{ formatRelativeTime(message.created_at) }}</span>
+            <span>{{ timeTick && formatRelativeTime(message.created_at) }}</span>
           </div>
         </div>
       </div>
@@ -374,6 +376,9 @@ export default {
       userIsTyping: false,
       typingTimeout: null,
       typingDebounce: null,
+      // used to force re-render of relative times every minute
+      timeTick: Date.now(),
+      sidebarTimer: null,
     };
   },
   computed: {
@@ -401,9 +406,22 @@ export default {
         this.setupEchoListeners();
       }, 100);
     });
+
+    // Refresh sidebar relative times every 60 seconds
+    try {
+      this.sidebarTimer = setInterval(() => {
+        this.timeTick = Date.now();
+      }, 60000); // 60,000 ms = 1 minute
+    } catch (e) {
+      console.error('Failed to start sidebar timer', e);
+    }
   },
   beforeUnmount() {
     this.cleanupEchoListeners();
+    if (this.sidebarTimer) {
+      clearInterval(this.sidebarTimer);
+      this.sidebarTimer = null;
+    }
   },
   methods: {
     setupEchoListeners() {
@@ -648,26 +666,98 @@ export default {
     updateConversationInSidebar(messageData) {
       console.log("📋 Updating sidebar with message:", messageData);
 
-      // Find the conversation in the sidebar
-      const conversationIndex = this.conversations.findIndex(
-        (c) => c.id === messageData.conversation_id
-      );
+      // Normalize message text and timestamp from various possible payload fields
+      const text = messageData.text || messageData.message || messageData.body || '';
+      const ts = messageData.created_at || messageData.date_time || messageData.createdAt || messageData.timestamp || null;
+      const lastUpdated = ts ? new Date(ts).toISOString() : new Date().toISOString();
+
+      // Determine conversation id from several possible payload fields
+      const messageConvId = messageData.conversation_id
+        || messageData.conversationId
+        || messageData.chat_id
+        || (messageData.conversation && messageData.conversation.id)
+        || null;
+
+      // Find the conversation in the sidebar (loose equality to handle string/number)
+      let conversationIndex = this.conversations.findIndex((c) => c.id == messageConvId);
+
+      // Fallback: if not found, try multiple heuristics for 1:1 chats
+      if (conversationIndex === -1 && messageData.sender && messageData.sender.id) {
+        const senderId = messageData.sender.id;
+        console.log('🔎 Sidebar match fallback: trying senderId', senderId);
+        conversationIndex = this.conversations.findIndex((c) => {
+          const part = c.participant || {};
+          const candidateIds = [
+            part.id,
+            part.user_id,
+            part.id && part.id.toString(),
+            c.participant_id,
+            c.participant_id && c.participant_id.toString(),
+            c.creator,
+            c.creator && c.creator.toString(),
+            // support nested participant.user.id
+            (part.user && part.user.id),
+          ];
+
+          // match any candidate id loosely
+          return candidateIds.some((cid) => cid != null && cid == senderId);
+        });
+
+        // Another fallback: match by sender name (if ids not available)
+        if (conversationIndex === -1 && messageData.sender.name) {
+          const senderName = (messageData.sender.name || '').toLowerCase();
+          conversationIndex = this.conversations.findIndex((c) => {
+            const pname = (c.participant && (c.participant.name || (c.participant.user && c.participant.user.name))) || '';
+            return pname.toLowerCase() === senderName;
+          });
+        }
+
+        console.log('🔎 Sidebar match result index:', conversationIndex);
+      }
 
       if (conversationIndex !== -1) {
-        // Update the conversation with new message data
+        // Update existing conversation entry
+        const existing = this.conversations[conversationIndex];
         const updatedConversation = {
-          ...this.conversations[conversationIndex],
-          last_message: messageData.text || messageData.message,
-          last_updated: messageData.created_at || messageData.date_time || new Date().toISOString(),
+          ...existing,
+          last_message: text || existing.last_message || '',
+          last_updated: lastUpdated,
+          updated_at: lastUpdated,
+          // increment unread_count for incoming messages from others
+          unread_count: (existing.unread_count || 0) + ((messageData.sender && messageData.sender.id != this.auth_info.id) ? 1 : 0),
         };
 
-        // Remove from current position and add to beginning (most recent)
+        // Replace and move to top
         this.conversations.splice(conversationIndex, 1);
         this.conversations.unshift(updatedConversation);
 
-        console.log("✅ Sidebar updated successfully");
+        console.log('✅ Sidebar updated successfully (existing conversation)');
       } else {
-        console.log("⚠️ Conversation not found in sidebar");
+        // If conversation not present in sidebar, insert a minimal placeholder so UI reflects activity
+        const placeholder = {
+          id: messageData.conversation_id,
+          creator: messageData.creator || null,
+          is_group: messageData.is_group || false,
+          group_name: messageData.group_name || null,
+          participant: messageData.participant || { name: messageData.sender?.name || 'Unknown', is_group: false },
+          unread_count: (messageData.sender && messageData.sender.id != this.auth_info.id) ? 1 : 0,
+          last_message: text,
+          last_updated: lastUpdated,
+          updated_at: lastUpdated,
+        };
+        this.conversations.unshift(placeholder);
+        console.log('✅ Sidebar updated: inserted placeholder conversation');
+      }
+
+      // Ensure list is consistently sorted by most recent activity
+      try {
+        this.conversations = this.conversations.sort((a, b) => {
+          const aTime = new Date(a.last_updated || a.updated_at).getTime();
+          const bTime = new Date(b.last_updated || b.updated_at).getTime();
+          return bTime - aTime;
+        });
+      } catch (e) {
+        console.error('Failed to sort conversations after sidebar update', e);
       }
     },
 
@@ -911,6 +1001,16 @@ export default {
       };
 
       this.messages.push(optimisticMessage);
+      // Update sidebar optimistically so user sees the conversation move to top
+      try {
+        this.updateConversationInSidebar({
+          conversation_id: optimisticMessage.conversation_id,
+          text: optimisticMessage.text,
+          created_at: optimisticMessage.created_at,
+        });
+      } catch (e) {
+        console.error('Error updating sidebar optimistically', e);
+      }
       this.newMessage = "";
       this.sendingMessage = true;
 
@@ -958,6 +1058,12 @@ export default {
 
         // Restore message text
         this.newMessage = messageText;
+        // Refresh conversations to restore accurate sidebar state
+        try {
+          await this.loadConversations();
+        } catch (e) {
+          console.error('Failed to reload conversations after send error', e);
+        }
 
         window.s_alert("Failed to send message. Please try again.", "error");
       } finally {
