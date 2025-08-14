@@ -26,9 +26,7 @@ class DatabaseSeeder extends Seeder
             /**
              * User seeder management.
              */
-            RoleSeeder::class,
             UserSeeder::class,
-            WebsiteSettingsSeeder::class,
         ]);
     }
 }

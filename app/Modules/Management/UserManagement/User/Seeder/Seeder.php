@@ -18,50 +18,61 @@ class Seeder extends SeederClass
     {
         $faker = Faker::create();
         self::$model::truncate();
-        
-          self::$model::create([
-            'name' => "super admin",
-            'email' => "superadmin@gmail.com",
+
+        self::$model::create([
+            'name' => "Md Abu Ehsan",
+            'email' => "ehsan@gmail.com",
             'password' => Hash::make('@12345678'),
-            'image' => 'avatar.png',
             'role_id' => 1,
         ]);
 
         self::$model::create([
-            'name' => "admin",
-            'email' => "admin@gmail.com",
-            'password' => Hash::make('@12345678'),
-            'image' => 'avatar.png',
-            'role_id' => 2,
-        ]);
-
-        self::$model::create([
-            'name' => "Md Ehsan",
-            'email' => "ehsan@gmail.com",
-            'password' => Hash::make('@12345678'),
-            'image' => 'avatar.png',
-            'role_id' => 3,
-        ]);
-        self::$model::create([
             'name' => "Md Mumin",
             'email' => "mumin@gmail.com",
             'password' => Hash::make('@12345678'),
-            'image' => 'avatar.png',
-            'role_id' => 4,
+
+            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Nazmul",
             'email' => "nazmul@gmail.com",
             'password' => Hash::make('@12345678'),
-            'image' => 'avatar.png',
-            'role_id' => 5,
+
+            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Abir",
             'email' => "abir@gmail.com",
             'password' => Hash::make('@12345678'),
-            'image' => 'avatar.png',
-            'role_id' => 6
+
+            'role_id' => 2,
+        ]);
+        self::$model::create([
+            'name' => "Md Tasnim",
+            'email' => "tasnim@gmail.com",
+            'password' => Hash::make('@12345678'),
+
+            'role_id' => 2,
+        ]);
+        self::$model::create([
+            'name' => "Md Mahfuz",
+            'email' => "mahfuz@gmail.com",
+            'password' => Hash::make('@12345678'),
+
+            'role_id' => 2,
+        ]);
+        self::$model::create([
+            'name' => "Md Sahjalal",
+            'email' => "sahjalal@gmail.com",
+            'password' => Hash::make('@12345678'),
+
+            'role_id' => 2,
+        ]);
+        self::$model::create([
+            'name' => "Md Yamin",
+            'email' => "yamin@gmail.com",
+            'password' => Hash::make('@12345678'),
+            'role_id' => 2,
         ]);
     }
 }

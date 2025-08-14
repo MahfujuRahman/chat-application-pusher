@@ -15,11 +15,11 @@ class GetAllData
             $orderByType = request()->input('sort_type') ?? 'desc';
             $status = request()->input('status') ?? 'active';
             $fields = request()->input('fields') ?? '*';
-           
+
             $start_date = request()->input('start_date');
             $end_date = request()->input('end_date');
 
-            $with = [];
+            $with = ['role', 'tasks', 'project', 'attendance'];
             $condition = [];
 
             $data = self::$model::query();
@@ -27,21 +27,31 @@ class GetAllData
             if (request()->has('search') && request()->input('search')) {
                 $searchKey = request()->input('search');
                 $data = $data->where(function ($q) use ($searchKey) {
-                    $q->where('name', 'like', '%' . $searchKey . '%');    
+                    $q->where('name', 'like', '%' . $searchKey . '%');
 
-                    $q->orWhere('email', 'like', '%' . $searchKey . '%');    
+                    $q->orWhere('email', 'like', '%' . $searchKey . '%');
 
-                    $q->orWhere('password', 'like', '%' . $searchKey . '%');    
+                    $q->orWhere('password', 'like', '%' . $searchKey . '%');
 
-                    $q->orWhere('image', 'like', '%' . $searchKey . '%');    
+                    $q->orWhere('image', 'like', '%' . $searchKey . '%');
 
-                    $q->orWhere('role_id', 'like', '%' . $searchKey . '%');              
-
+                    $q->orWhere('role_id', 'like', '%' . $searchKey . '%');
                 });
             }
 
+            // Exclude current authenticated user and filter by role
+            if (auth()->check()) {
+                $currentUser = auth()->user();
+                $data = $data->where('id', '!=', $currentUser->id);
+                if ($currentUser->role_id != 1) {
+                    // Not super admin, only see role_id 4
+                    $data = $data->where('role_id', 2);
+                }
+                // If role_id == 1, see all users except self
+            }
+
             if ($start_date && $end_date) {
-                 if ($end_date > $start_date) {
+                if ($end_date > $start_date) {
                     $data->whereBetween('created_at', [$start_date . ' 00:00:00', $end_date . ' 23:59:59']);
                 } elseif ($end_date == $start_date) {
                     $data->whereDate('created_at', $start_date);
@@ -59,9 +69,9 @@ class GetAllData
                     ->select($fields)
                     ->where($condition)
                     ->where('status', $status)
-                    ->limit($pageLimit)
                     ->orderBy($orderByColumn, $orderByType)
                     ->get();
+                return entityResponse($data);
             } else if ($status == 'trased') {
                 $data = $data
                     ->with($with)
@@ -87,7 +97,6 @@ class GetAllData
                 "inactive_data_count" => self::$model::inactive()->count(),
                 "trased_data_count" => self::$model::trased()->count(),
             ]);
-
         } catch (\Exception $e) {
             return messageResponse($e->getMessage(), [], 500, 'server_error');
         }

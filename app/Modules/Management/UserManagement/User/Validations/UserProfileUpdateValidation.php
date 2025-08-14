@@ -43,9 +43,11 @@ class UserProfileUpdateValidation extends FormRequest
     {
         return [
             'name' => 'required | sometimes',
-            'email' => 'required | sometimes', Rule::unique('users', 'email')->ignore(auth()->user()->id),
+            'email' => 'required | sometimes',
+            Rule::unique('users', 'email')->ignore(auth()->user()->id),
             'phone_number' => 'required | sometimes',
             'address' => 'required | sometimes',
+            'social_media' => 'sometimes',
         ];
     }
 }

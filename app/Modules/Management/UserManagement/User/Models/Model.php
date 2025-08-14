@@ -19,17 +19,25 @@ class Model extends Authenticatable
     protected $table = "users";
     protected $guarded = [];
     protected $hidden = ['password'];
+    protected $casts = [
+        'social_media' => 'array',
+    ]; 
 
 
 
 
     public static $roleModel = \App\Modules\Management\UserManagement\Role\Models\Model::class;
+    public static $tasksIdsModel = \App\Modules\Management\TasksManagement\Tasks\Models\Model::class;
+    public static $attendanceModel = \App\Modules\Management\AttendanceManagement\Attendance\Models\Model::class;
+
+    public static $projectModel = \App\Modules\Management\ProjectManagement\Project\Models\Model::class;
+
 
     protected static function booted()
     {
         static::created(function ($data) {
             $random_no = random_int(100, 999) . $data->id . random_int(100, 999);
-            $slug = $data->title . " " . $random_no;
+            $slug = $data->name . " " . $random_no;
             $data->slug = Str::slug($slug); //use Illuminate\Support\Str;
             if (strlen($data->slug) > 50) {
                 $data->slug = substr($data->slug, strlen($data->slug) - 50, strlen($data->slug));
@@ -58,5 +66,20 @@ class Model extends Authenticatable
     public function role()
     {
         return $this->belongsTo(self::$roleModel);
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(self::$tasksIdsModel,'assigned_to' );
+    }
+
+    public function attendance()
+    {
+        return $this->hasMany(self::$attendanceModel,'user_id' );
+    }
+
+    public function project()
+    {
+        return $this->belongsToMany(self::$projectModel, 'project_users', 'user_id', 'project_id');
     }
 }

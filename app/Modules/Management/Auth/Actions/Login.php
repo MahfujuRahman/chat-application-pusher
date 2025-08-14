@@ -19,9 +19,9 @@ class Login
             if (!$check_auth_user) {
                 return response()->json(['status' => 'error', 'message' => 'Sorry,user not found'], 400);
             }
-            if (!$check_auth_user->can_login) {
-                return response()->json(['status' => 'error', 'message' => 'Sorry, you are not allowed to login'], 400);
-            }
+            // if (!$check_auth_user->can_login) {
+            //     return response()->json(['status' => 'error', 'message' => 'Sorry, you are not allowed to login'], 400);
+            // }
             if (Hash::check($request->password, $check_auth_user->password)) {
                 DB::table('oauth_access_tokens')->where("user_id", $check_auth_user->id)->update(['revoked' => 1]);
                 $data['access_token'] = $check_auth_user->createToken('accessToken')->accessToken;
