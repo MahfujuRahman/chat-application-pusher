@@ -19,7 +19,7 @@ class GetAllData
             $start_date = request()->input('start_date');
             $end_date = request()->input('end_date');
 
-            $with = ['role', 'tasks', 'project', 'attendance'];
+            $with = [];
             $condition = [];
 
             $data = self::$model::query();
@@ -43,11 +43,6 @@ class GetAllData
             if (auth()->check()) {
                 $currentUser = auth()->user();
                 $data = $data->where('id', '!=', $currentUser->id);
-                if ($currentUser->role_id != 1) {
-                    // Not super admin, only see role_id 4
-                    $data = $data->where('role_id', 2);
-                }
-                // If role_id == 1, see all users except self
             }
 
             if ($start_date && $end_date) {
