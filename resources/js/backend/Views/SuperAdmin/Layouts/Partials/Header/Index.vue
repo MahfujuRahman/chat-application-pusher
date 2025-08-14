@@ -3,14 +3,14 @@
 
   <header class="topbar-nav">
     <nav class="navbar navbar-expand fixed-top">
-      <span class="ml-2 font-weight-bold" style="font-size:1.5rem;letter-spacing:2px;
+      <a @click="goToMessages" class="ml-2 font-weight-bold" style="font-size:1.5rem;letter-spacing:2px; cursor: pointer;
         background: linear-gradient(90deg, rgb(186 196 255) 0%, rgb(72 206 223) 50%, rgb(227 190 135) 100%) text;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-shadow: 1px 1px 4px rgba(63,81,181,0.15);">
         ChatZone
-      </span>
-
+      </a>
+      
       <div class="search-bar flex-grow-1"></div>
 
       <ul class="navbar-nav align-items-center right-nav-link ml-auto">
@@ -83,6 +83,11 @@ export default {
   }),
 
   methods: {
+    // Navigate to your existing messages page
+    goToMessages() {
+      // Update this route to match your existing messages route
+      this.$router.push('/message/conversation'); // or whatever your messages route is
+    },
     toggle_menu: function () {
       document.getElementById("wrapper").classList.toggle("toggled");
     },

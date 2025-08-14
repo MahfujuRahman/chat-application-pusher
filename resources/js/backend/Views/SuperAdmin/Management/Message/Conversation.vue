@@ -330,7 +330,7 @@
 
 <script>
 import axios from "axios";
-import { auth_store } from "../../../../../GlobalStore/auth_store";
+import { auth_store } from "../../../../GlobalStore/auth_store";
 import { mapState } from "pinia";
 
 export default {

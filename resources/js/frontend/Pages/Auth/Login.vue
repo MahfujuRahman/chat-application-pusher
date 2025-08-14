@@ -127,7 +127,7 @@ export default {
             localStorage.setItem("admin_token", data.access_token);
             localStorage.setItem("admin_role", data.user?.role_id);
             if (data.user?.role_id == 1) {
-              window.location.href = "super-admin#/dashboard";
+              window.location.href = "super-admin#/message/conversation";
             } else if (data.user?.role_id == 2) {
               window.location.href = "employee#/dashboard";
             }
