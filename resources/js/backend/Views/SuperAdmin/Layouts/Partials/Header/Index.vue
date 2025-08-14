@@ -10,7 +10,7 @@
         text-shadow: 1px 1px 4px rgba(63,81,181,0.15);">
         ChatZone
       </a>
-      
+
       <div class="search-bar flex-grow-1"></div>
 
       <ul class="navbar-nav align-items-center right-nav-link ml-auto">
@@ -47,15 +47,16 @@
 
             <li class="dropdown-divider"></li>
             <li>
+              <router-link class="dropdown-item" :to="{ name: 'ConversationMessage' }">
+                <i class="zmdi zmdi-comment-text mr-3"></i>Chat
+              </router-link>
+            </li>
+            <li>
               <router-link class="dropdown-item" :to="{ name: 'AdminProfileSettings' }">
                 <i class="zmdi zmdi-accounts mr-3"></i>Profile
               </router-link>
             </li>
-            <li>
-              <router-link class="dropdown-item" :to="{ name: 'AdminSiteSettings' }">
-                <i class="zmdi zmdi-settings mr-3"></i>Settings
-              </router-link>
-            </li>
+
             <li class="dropdown-divider"></li>
             <li class="dropdown-item" @click="logout()" role="button">
               <i class="zmdi zmdi-power mr-3"></i>Logout

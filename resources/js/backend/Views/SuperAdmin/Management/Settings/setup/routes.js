@@ -1,7 +1,6 @@
 
 import Layout from "../pages/Layout.vue";
 import AdminProfileSettings from "../pages/AdminProfileSettings.vue";
-import AdminSiteSettings from "../pages/SiteSettings.vue";
 
 
 const routes = {
@@ -13,12 +12,6 @@ const routes = {
             name: "AdminProfileSettings",
             component: AdminProfileSettings,
         },
-        {
-            path: "site-settings",
-            name: "AdminSiteSettings",
-            component: AdminSiteSettings,
-        },
-
     ],
 };
 

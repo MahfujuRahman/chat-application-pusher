@@ -19,11 +19,11 @@ class Seeder extends SeederClass
         self::$model::truncate();
 
         self::$model::create([
-            'name' => "project_manager",
+            'name' => "super_admin",
             'serial_no' => 1,
         ]);
         self::$model::create([
-            'name' => "employee",
+            'name' => "admin",
             'serial_no' => 2,
         ]);
     }

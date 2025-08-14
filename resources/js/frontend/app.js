@@ -28,5 +28,5 @@ createInertiaApp({
     app.mount(el);
   },
 
-  title: (title) => `PMS(TechParkIT) : ${title}`,
+  title: (title) => `ChatZone : ${title}`,
 });

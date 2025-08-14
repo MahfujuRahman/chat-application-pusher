@@ -20,13 +20,11 @@ class CheckUser
                         'address',
                         'phone_number',
                         'image',
-                        'role_id',
                         'social_media',
                         'designation',
                     ])
                     ->first();
                 auth()->guard('web')->login($user, 1);
-                $user->role = $user->role()->select('id', 'name', 'serial_no')->first();
                 return entityResponse($user);
             }
             return response()->json(["User not found"], 404);

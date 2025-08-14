@@ -4,7 +4,7 @@ use App\Modules\Management\UserManagement\User\Controller\Controller;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
-    Route::prefix('users')->middleware('auth:api')->group(function () {
+    Route::prefix('users')->group(function () {
         Route::get('', [Controller::class, 'index']);
         Route::get('{slug}', [Controller::class, 'show']);
         Route::post('store', [Controller::class, 'store']);
@@ -14,7 +14,6 @@ Route::prefix('v1')->group(function () {
         Route::post('restore', [Controller::class, 'restore']);
         Route::post('import', [Controller::class, 'import']);
         Route::post('bulk-action', [Controller::class, 'bulkAction']);
-        Route::get('get-users-by-project-id/{project_id}', [Controller::class, 'GetUsersByProjectId']);
     });
     //
     Route::middleware('auth:api')->group(function () {

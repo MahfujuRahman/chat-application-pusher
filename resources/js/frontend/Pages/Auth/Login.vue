@@ -10,7 +10,7 @@
             <div class="brand-icon">
               <i class="fas fa-shield-alt"></i>
             </div>
-            <h2 class="brand-title">Project Management</h2>
+            <h2 class="brand-title">ChatZone</h2>
             <p class="brand-subtitle">Welcome back! Please sign in to your account</p>
           </div>
         </div>
@@ -98,8 +98,68 @@ export default {
     };
   },
 
-  mounted() {
+  async mounted() {
     this.loadRememberedCredentials();
+    // If an admin token exists, validate it and redirect to conversation
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+      // set temporary auth header for validation
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      try {
+        const resp = await axios.get('/check_user');
+        if (resp.data?.status === 'success') {
+          const prev_url = window.sessionStorage.getItem('prevurl');
+          let redirectTo;
+          if (prev_url && !prev_url.includes('/login')) {
+            // normalize prev_url to an absolute URL when possible
+            if (prev_url.startsWith('http')) {
+              redirectTo = prev_url;
+            } else if (prev_url.startsWith('/')) {
+              // already a root path
+              redirectTo = window.location.origin + prev_url;
+            } else if (prev_url.startsWith('#')) {
+              // hash-only routes should be resolved under /super-admin
+              redirectTo = window.location.origin + '/super-admin' + prev_url;
+            } else {
+              redirectTo = window.location.origin + '/' + prev_url;
+            }
+          } else {
+            redirectTo = window.location.origin + '/super-admin#/message/conversation';
+          }
+          window.location.href = redirectTo;
+          return;
+        } else {
+          // invalid token — remove and continue to login
+          localStorage.removeItem('admin_token');
+        }
+      } catch (err) {
+        console.warn('Token validation failed, clearing token', err);
+        localStorage.removeItem('admin_token');
+      } finally {
+        // clear temporary header
+        delete axios.defaults.headers.common['Authorization'];
+      }
+    }
+
+    // If app store indicates authenticated and auth_info is loaded, redirect
+    if (this.is_auth && this.auth_info) {
+      const prev_url = window.sessionStorage.getItem('prevurl');
+      let redirectTo;
+      if (prev_url && !prev_url.includes('/login')) {
+        if (prev_url.startsWith('http')) {
+          redirectTo = prev_url;
+        } else if (prev_url.startsWith('/')) {
+          redirectTo = window.location.origin + prev_url;
+        } else if (prev_url.startsWith('#')) {
+          redirectTo = window.location.origin + '/super-admin' + prev_url;
+        } else {
+          redirectTo = window.location.origin + '/' + prev_url;
+        }
+      } else {
+        redirectTo = window.location.origin + '/super-admin#/message/conversation';
+      }
+      window.location.href = redirectTo;
+    }
   },
 
   methods: {
@@ -125,11 +185,10 @@ export default {
           if (data.access_token) {
             window.s_alert("Login Successfully");
             localStorage.setItem("admin_token", data.access_token);
-            localStorage.setItem("admin_role", data.user?.role_id);
-            if (data.user?.role_id == 1) {
+            if (data.user) {
               window.location.href = "super-admin#/message/conversation";
-            } else if (data.user?.role_id == 2) {
-              window.location.href = "employee#/dashboard";
+            } else {
+              window.location.href = "login";
             }
           }
         }

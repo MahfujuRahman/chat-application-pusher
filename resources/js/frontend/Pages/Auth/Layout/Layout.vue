@@ -1,5 +1,4 @@
 <template>
-
     <div id="authentication">
         <div class="container">
             <div class="background">

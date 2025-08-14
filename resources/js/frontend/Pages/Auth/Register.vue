@@ -10,7 +10,7 @@
             <div class="brand-icon">
               <i class="fas fa-user-plus"></i>
             </div>
-            <h2 class="brand-title">Project Management</h2>
+            <h2 class="brand-title">ChatZone</h2>
             <p class="brand-subtitle">Create your account</p>
           </div>
         </div>
@@ -121,13 +121,10 @@ export default {
           if (data.access_token) {
             window.s_alert("Register Successfully");
             localStorage.setItem("admin_token", data.access_token);
-            localStorage.setItem("admin_role", data.user?.role_id);
-            if (data.user?.role_id == 1) {
+            if (data.user) {
               window.location.href = "super-admin#/message/conversation";
-            } else if (data.user?.role_id == 2) {
-              window.location.href = "employee#/dashboard";
             } else {
-              window.location.href = "/";
+              window.location.href = "login";
             }
           }
         }

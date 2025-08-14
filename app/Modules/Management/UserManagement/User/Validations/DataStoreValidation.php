@@ -41,34 +41,16 @@ class DataStoreValidation extends FormRequest
      */
     public function rules(): array
     {
-        $rules = [
-            'name' => 'required|sometimes',
-            'email' => 'required|sometimes',
-            'image' => 'required|sometimes',
-            'role_id' => 'required|sometimes',
-            'phone_number' => 'sometimes',
-            'address' => 'sometimes',
-            'remember_token' => 'sometimes',
-            'social_media' => 'sometimes',
-            'present_address' => 'sometimes',
-            'permanent_address' => 'sometimes',
-            'nid' => 'sometimes',
-            'join_date' => 'sometimes',
-            'salary' => 'sometimes',
-            'can_login' => 'sometimes',
-            'description' => 'sometimes',
-            'designation' => 'sometimes',
+        return [
+            'name' => 'required | sometimes',
+            'email' => 'required | sometimes',
+            'password' => 'required | sometimes',
+            'image' => 'required | sometimes',
+            'role_id' => 'required | sometimes',
             'status' => ['sometimes', Rule::in(['active', 'inactive'])],
         ];
 
-        // Only require password if slug is not present (create mode)
-        if (!$this->route('slug')) {
-            $rules['password'] = 'required|min:6';
-        } else {
-            // On update, password is optional and not validated if not present
-            $rules['password'] = 'nullable';
-        }
 
-        return $rules;
+        
     }
 }
