@@ -1,6 +1,6 @@
 <template>
   <Layout>
-    <div class="professional-login-container">
+    <div class="professional-login-container" v-if="step_one">
       <div class="login-card">
         <div class="login-header">
           <div class="brand-section">
@@ -11,7 +11,7 @@
             <p class="brand-subtitle">Enter your email to receive a verification code</p>
           </div>
         </div>
-        
+
         <div v-if="step_one">
           <form @submit.prevent="ForgotPasswordSubmitHandler" class="login-form">
             <div class="form-group">
@@ -19,22 +19,11 @@
                 <i class="fas fa-envelope"></i>
                 Email Address
               </label>
-              <input
-                id="email"
-                class="form-control"
-                type="email"
-                placeholder="Enter your email address"
-                name="email"
-                v-model="email"
-                required
-              />
+              <input id="email" class="form-control" type="email" placeholder="Enter your email address" name="email"
+                v-model="email" required />
             </div>
 
-            <button
-              class="login-button"
-              type="submit"
-              :disabled="loading || !email"
-            >
+            <button class="login-button" type="submit" :disabled="loading || !email">
               <span v-if="!loading" class="button-content">
                 <i class="fas fa-paper-plane"></i>
                 Send Verification Code
@@ -45,22 +34,23 @@
               </span>
             </button>
           </form>
-          
+
           <div class="login-footer">
             <p class="footer-text">
-              Remember your password? 
+              Remember your password?
               <Link href="/login" class="signup-link">Back to Login</Link>
             </p>
           </div>
         </div>
 
-        <template v-if="step_two">
-          <verify-code :email="email"></verify-code>
-        </template>
       </div>
     </div>
+    <template v-if="step_two">
+      <verify-code :email="email"></verify-code>
+    </template>
   </Layout>
 </template>
+
 <script>
 import Layout from "../Layout/Layout.vue";
 import VerifyCode from "./VerifyCode.vue";
