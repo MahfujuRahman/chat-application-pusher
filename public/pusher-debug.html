@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusher Debug Test</title>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+</head>
+<body>
+    <h1>Pusher Debug Test</h1>
+    <div id="status"></div>
+    <div id="messages"></div>
+    <button onclick="triggerTestMessage()">Send Test Message</button>
+
+    <script>
+        // Enable Pusher logging
+        Pusher.logToConsole = true;
+
+        const pusher = new Pusher('f2a8ac08c5d831952276', {
+            cluster: 'ap2',
+            encrypted: true
+        });
+
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+
+        // Connection status
+        pusher.connection.bind('connected', () => {
+            statusDiv.innerHTML = '<span style="color: green;">✅ Connected to Pusher</span>';
+        });
+
+        pusher.connection.bind('disconnected', () => {
+            statusDiv.innerHTML = '<span style="color: red;">❌ Disconnected from Pusher</span>';
+        });
+
+        pusher.connection.bind('error', (err) => {
+            statusDiv.innerHTML = '<span style="color: red;">❌ Connection Error: ' + JSON.stringify(err) + '</span>';
+        });
+
+        // Subscribe to a test channel
+        const channel = pusher.subscribe('test-channel');
+        
+        channel.bind('test-event', (data) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = `<strong>Test Event Received:</strong> ${JSON.stringify(data)}`;
+            messagesDiv.appendChild(messageDiv);
+        });
+
+        // Subscribe to your chat channel (replace with your user ID)
+        const userId = prompt("Enter your user ID for testing:");
+        if (userId) {
+            // Note: This will fail authentication for private channels without proper auth
+            // But you can see if the connection attempt is made
+            const privateChatChannel = pusher.subscribe(`private-chat.${userId}`);
+            
+            privateChatChannel.bind('pusher:subscription_error', (err) => {
+                const errorDiv = document.createElement('div');
+                errorDiv.innerHTML = `<span style="color: red;">Private Channel Error: ${JSON.stringify(err)}</span>`;
+                messagesDiv.appendChild(errorDiv);
+            });
+
+            privateChatChannel.bind('pusher:subscription_succeeded', () => {
+                const successDiv = document.createElement('div');
+                successDiv.innerHTML = `<span style="color: green;">✅ Successfully subscribed to private-chat.${userId}</span>`;
+                messagesDiv.appendChild(successDiv);
+            });
+
+            privateChatChannel.bind('MessageSent', (data) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.innerHTML = `<strong>Message Received:</strong> ${JSON.stringify(data)}`;
+                messagesDiv.appendChild(messageDiv);
+            });
+        }
+
+        function triggerTestMessage() {
+            // This would require backend call to trigger the actual MessageSent event
+            alert('This would trigger a test message from the backend. Use the Laravel command instead.');
+        }
+    </script>
+</body>
+</html>
