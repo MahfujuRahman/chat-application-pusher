@@ -20,59 +20,61 @@ class Seeder extends SeederClass
         self::$model::truncate();
 
         self::$model::create([
+            'name' => "Ajmain Akash",
+            'email' => "ajmain@gmail.com",
+            'password' => Hash::make('@12345678'),
+        ]);
+
+        self::$model::create([
             'name' => "Md Abu Ehsan",
             'email' => "ehsan@gmail.com",
             'password' => Hash::make('@12345678'),
-            'role_id' => 1,
         ]);
 
         self::$model::create([
             'name' => "Md Mumin",
             'email' => "mumin@gmail.com",
             'password' => Hash::make('@12345678'),
-
-            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Nazmul",
             'email' => "nazmul@gmail.com",
             'password' => Hash::make('@12345678'),
-
-            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Abir",
             'email' => "abir@gmail.com",
             'password' => Hash::make('@12345678'),
-
-            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Tasnim",
             'email' => "tasnim@gmail.com",
             'password' => Hash::make('@12345678'),
-
-            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Mahfuz",
             'email' => "mahfuz@gmail.com",
             'password' => Hash::make('@12345678'),
-
-            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Sahjalal",
             'email' => "sahjalal@gmail.com",
             'password' => Hash::make('@12345678'),
-
-            'role_id' => 2,
         ]);
         self::$model::create([
             'name' => "Md Yamin",
             'email' => "yamin@gmail.com",
-            'password' => Hash::make('@12345678'),
-            'role_id' => 2,
+            'password' => Hash::make('@12345678')
         ]);
+
+
+        // Create 8 more users with Faker
+        for ($i = 0; $i < 8; $i++) {
+            self::$model::create([
+                'name' => $faker->name,
+                'email' => $faker->unique()->safeEmail,
+                'password' => Hash::make('@12345678'),
+            ]);
+        }
     }
 }
