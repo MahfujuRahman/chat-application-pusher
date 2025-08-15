@@ -208,7 +208,7 @@
           <div class="conversation-meta">
             <span class="conversation-time">{{ timeTick && formatRelativeTime(conversation.last_updated ||
               conversation.updated_at) }}</span>
-            <span v-if="conversation.unread_count > 0" class="unread-badge">{{ conversation.unread_count }}</span>
+            <span v-if="conversation.unread_count > 0 && conversation.id !== activeConversation?.id" class="unread-badge">{{ conversation.unread_count }}</span>
             <button v-if="conversation.participant?.is_group"
               class="btn btn-sm btn-outline-light group-members-btn text-white border-white"
               @click.stop="openGroupMembersModal(conversation)" title="View Group Members">
@@ -635,6 +635,18 @@ export default {
           this.scrollToBottom();
           console.log("✅ STEP R8: Message added successfully!");
           console.log("New messages count:", this.messages.length);
+          // If the incoming message is for the active conversation and it's from someone else,
+          // immediately mark it as read so the UI and backend reflect seen state.
+          if (senderData?.id && senderData.id !== this.auth_info.id) {
+            // Fire mark-as-read to backend (best-effort)
+            this.markMessagesAsRead(messageData.conversation_id).catch(() => {});
+
+            // Ensure sidebar shows zero unread for the active conversation
+            const convIndex = this.conversations.findIndex((c) => c.id == messageData.conversation_id);
+            if (convIndex !== -1) {
+              this.conversations[convIndex].unread_count = 0;
+            }
+          }
         } else {
           console.log("🔄 STEP R7: Message from different conversation, refreshing list");
           this.loadConversations();
@@ -718,13 +730,15 @@ export default {
       if (conversationIndex !== -1) {
         // Update existing conversation entry
         const existing = this.conversations[conversationIndex];
+        const isActive = this.activeConversation && (this.activeConversation.id == (messageData.conversation_id || messageConvId));
+        const increment = (messageData.sender && messageData.sender.id != this.auth_info.id) ? 1 : 0;
         const updatedConversation = {
           ...existing,
           last_message: text || existing.last_message || '',
           last_updated: lastUpdated,
           updated_at: lastUpdated,
-          // increment unread_count for incoming messages from others
-          unread_count: (existing.unread_count || 0) + ((messageData.sender && messageData.sender.id != this.auth_info.id) ? 1 : 0),
+          // Only increment unread_count when the conversation is not currently active
+          unread_count: isActive ? 0 : ((existing.unread_count || 0) + increment),
         };
 
         // Replace and move to top
@@ -740,7 +754,7 @@ export default {
           is_group: messageData.is_group || false,
           group_name: messageData.group_name || null,
           participant: messageData.participant || { name: messageData.sender?.name || 'Unknown', is_group: false },
-          unread_count: (messageData.sender && messageData.sender.id != this.auth_info.id) ? 1 : 0,
+          unread_count: ((messageData.sender && messageData.sender.id != this.auth_info.id) && (!this.activeConversation || this.activeConversation.id != messageData.conversation_id)) ? 1 : 0,
           last_message: text,
           last_updated: lastUpdated,
           updated_at: lastUpdated,
@@ -918,9 +932,20 @@ export default {
 
         // Mark messages as read after a short delay to ensure user is actually viewing
         if (this.pendingMarkAsRead) {
-          setTimeout(() => {
-            this.checkAndMarkAsRead();
+          setTimeout(async () => {
+            await this.checkAndMarkAsRead();
+            // Set unread_count to 0 for the active conversation in the sidebar
+            const conversationIndex = this.conversations.findIndex((c) => c.id === convo.id);
+            if (conversationIndex !== -1) {
+              this.conversations[conversationIndex].unread_count = 0;
+            }
           }, 1500); // 1.5 second delay to ensure user is actually reading
+        } else {
+          // If already read, ensure unread_count is 0 for active conversation
+          const conversationIndex = this.conversations.findIndex((c) => c.id === convo.id);
+          if (conversationIndex !== -1) {
+            this.conversations[conversationIndex].unread_count = 0;
+          }
         }
 
         if (this.isMobile) this.mobileView = "chat";
