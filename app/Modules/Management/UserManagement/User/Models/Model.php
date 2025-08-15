@@ -23,16 +23,6 @@ class Model extends Authenticatable
         'social_media' => 'array',
     ]; 
 
-
-
-
-    public static $roleModel = \App\Modules\Management\UserManagement\Role\Models\Model::class;
-    public static $tasksIdsModel = \App\Modules\Management\TasksManagement\Tasks\Models\Model::class;
-    public static $attendanceModel = \App\Modules\Management\AttendanceManagement\Attendance\Models\Model::class;
-
-    public static $projectModel = \App\Modules\Management\ProjectManagement\Project\Models\Model::class;
-
-
     protected static function booted()
     {
         static::created(function ($data) {
@@ -63,23 +53,4 @@ class Model extends Authenticatable
         return $q->onlyTrashed();
     }
 
-    public function role()
-    {
-        return $this->belongsTo(self::$roleModel);
-    }
-
-    public function tasks()
-    {
-        return $this->hasMany(self::$tasksIdsModel,'assigned_to' );
-    }
-
-    public function attendance()
-    {
-        return $this->hasMany(self::$attendanceModel,'user_id' );
-    }
-
-    public function project()
-    {
-        return $this->belongsToMany(self::$projectModel, 'project_users', 'user_id', 'project_id');
-    }
 }

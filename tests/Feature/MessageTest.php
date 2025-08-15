@@ -119,11 +119,13 @@ class MessageTest extends TestCase
     
     protected function createTestUser($name = 'Test User', $email = null)
     {
-        return ManagementUser::create([
-            'name' => $name,
-            'email' => $email ?: 'user+' . uniqid() . '@example.test',
-            'password' => Hash::make('password'),
-        ]);
+        return ManagementUser::withoutEvents(function () use ($name, $email) {
+            return ManagementUser::create([
+                'name' => $name,
+                'email' => $email ?: 'user+' . uniqid() . '@example.test',
+                'password' => Hash::make('password'),
+            ]);
+        });
     }
     
     // FEATURE TESTS FOR API ENDPOINTS

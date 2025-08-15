@@ -17,54 +17,18 @@ class MessageBroadcastTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->createTestSchema();
     }
     
-    protected function createTestSchema()
-    {
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->string('remember_token', 100)->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-        });
-
-        Schema::create('conversation', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('creator')->nullable();
-            $table->unsignedBigInteger('participant')->nullable();
-            $table->boolean('is_group')->default(false);
-            $table->string('group_name')->nullable();
-            $table->json('group_participants')->nullable();
-            $table->timestamp('last_updated')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-        });
-
-        Schema::create('messages', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('conversation_id');
-            $table->unsignedBigInteger('sender');
-            $table->unsignedBigInteger('receiver')->nullable();
-            $table->text('text')->nullable();
-            $table->string('file_path')->nullable();
-            $table->timestamp('date_time')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-        });
-    }
     
     protected function createTestUser($name = 'Test User', $email = null)
     {
-        return ManagementUser::create([
-            'name' => $name,
-            'email' => $email ?: 'user+' . uniqid() . '@example.test',
-            'password' => Hash::make('password'),
-        ]);
+        return ManagementUser::withoutEvents(function () use ($name, $email) {
+            return ManagementUser::create([
+                'name' => $name,
+                'email' => $email ?: 'user+' . uniqid() . '@example.test',
+                'password' => Hash::make('password'),
+            ]);
+        });
     }
 
     // BROADCASTING TESTS
